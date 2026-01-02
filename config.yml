@@ -1,6 +1,6 @@
 # 基础博客配置
 blog:
-  avatar: "static/avatar.png"           # 头像文件路径
+  avatar: "static/avatar.png"           # 头像文件路径（相对路径）
   name: "VaLog"                         # 博客名称
   description: "个人技术博客"            # 博客描述
   favicon: "static/favicon.ico"         # 网站图标
@@ -24,9 +24,9 @@ special:
     Total_time: "2023.01.01"            # 格式: yyyy.mm.dd，自动计算运行天数
     Others: "其他说明文本"
 
-# 主题配置
+# 主题配置（**修正**）
 theme:
-  mode: "default"                       # 默认主题配置,只有两个状态,default和light(因为默认就是dark),如果为light则将localstorage中的"theme"值修改为"light"
+  mode: "dark"                          # 主题模式: "dark" | "light"，默认"dark"
   primary_color: "#e74c3c"              # 主题主色
-  dark_bg: "#adadad"                    # 暗色背景
+  dark_bg: "#121212"                    # 暗色背景（修正为代码中的实际值）
   light_bg: "#f5f7fa"                   # 亮色背景
