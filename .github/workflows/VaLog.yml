@@ -1,45 +1,110 @@
-name: VaLog Blog
+name: VaLog Blog CI/CD
 
 on:
+  # 当 Issues 有变化时
+  issues:
+    types: [opened, edited, reopened]
+  # 当代码推送到 main 分支时
   push:
     branches: [ main ]
-  issues:
-    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  # 每天凌晨2点自动构建
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 2 * * *'
+  # 手动触发
   workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.10'
 
 jobs:
   generate-blog:
     runs-on: ubuntu-latest
     
-    permissions:
-      contents: write
-      issues: read
-      pages: write
-    
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
     
-    - name: Setup Python
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
     
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install PyYAML Jinja2 markdown requests
-    
-    - name: Run Generator
+    - name: Generate VaLog Blog
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-      run: python VaLog.py
-    
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
+      run: |
+        echo "🐍 Python版本: $(python --version)"
+        echo "📁 当前目录: $(pwd)"
+        echo "📊 仓库: ${{ github.repository }}"
+        
+        # 安装依赖
+        pip install PyYAML markdown requests Jinja2 Pillow
+        
+        # 查看配置文件
+        if [ -f "config.yml" ]; then
+          echo "✅ 找到 config.yml"
+          head -20 config.yml
+        else
+          echo "❌ 未找到 config.yml"
+          exit 1
+        fi
+        
+        # 生成博客
+        echo "🚀 开始生成博客..."
+        python VaLog.py --deploy generate
+        
+        # 检查生成结果
+        echo "📁 生成的文件:"
+        find docs -type f 2>/dev/null || echo "未找到 docs 目录"
+        
+    - name: Upload generated site
+      uses: actions/upload-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
+        name: vlog-blog
+        path: docs/
+        retention-days: 1
+
+  deploy-pages:
+    needs: generate-blog
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    permissions:
+      pages: write
+      id-token: write
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Download generated site
+      uses: actions/download-artifact@v3
+      with:
+        name: vlog-blog
+        path: docs
+        
+    - name: Show deployment files
+      run: |
+        echo "📦 准备部署的文件:"
+        find docs -type f | sort
+        echo ""
+        echo "📊 文件总数: $(find docs -type f | wc -l)"
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+      
+    - name: Upload to Pages
+      uses: actions/upload-pages-artifact@v1
+      with:
+        path: docs/
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+      
+    - name: Show blog URL
+      run: |
+        echo "🎉 博客部署完成!"
+        echo "🌐 访问地址: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+        echo "📊 GitHub Pages 设置: https://github.com/${{ github.repository }}/settings/pages"
