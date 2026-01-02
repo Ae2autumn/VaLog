@@ -61,52 +61,35 @@
 自动生成的数据文件，包含文章数据、菜单项等，不应手动修改。
 
 ## 目录结构
-```
+```txt
 .github/workflows/
-
 └── VaLog.yml                   # GitHub Actions工作流
 
 config.yml                     # 用户配置文件
-
 base.yaml                      # 内部数据文件（自动生成）
-
 VaLog.py                       # 主生成脚本（单文件）
-
 requirements.txt               # Python依赖
 
 template/                      # HTML模板
-
 ├── home.html                  # 主页模板（完整代码）
-
 └── article.html               # 文章页模板（完整代码）
 
 docs/                          # 生成目录（GitHub Pages）
-
 ├── index.html                 # 主页（生成）
-
 ├── article/                   # 文章目录
-
 └── favicon.ico
 
 O-MD/                          # 原始Markdown缓存
-
 └── articles.json              # 文章状态记录
 
-
 static/                        # 静态资源
-
 ├── avatar.png                # 头像
-
 ├── favicon.ico               # 图标
-
 └── custom/                   # 用户自定义
-
     ├── custom.css
     └── custom.js
 
 README.md                      # 项目说明
-
 LICENSE                        # 许可证
-
 .gitignore                     # Git忽略
 ```
