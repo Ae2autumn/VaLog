@@ -355,8 +355,7 @@ class VaLogGenerator:
             "menu_items": menu_items_data
         }
         
-        # 保存到文件
-        os.makedirs(os.path.dirname("base.yaml"), exist_ok=True)
+        # 保存到文件 - 修复目录创建问题
         with open("base.yaml", 'w', encoding='utf-8') as f:
             yaml.dump(self.base_data, f, allow_unicode=True, default_flow_style=False)
         
