@@ -4,8 +4,9 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <meta name="description" content="{{ blog.description }}">
-   <title>{{ blog.name }}</title>
+   <meta name="description" content="VaLog">
+   <title>VaLog</title>
+   <link rel="icon" href="favicon.ico">
    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style"
                                                                                                                            onload="this.onload=null;this.rel='stylesheet'">
    <noscript>
@@ -13,11 +14,11 @@
    </noscript>
    <style>
       :root {
-         --primary-color: {{ theme.primary_color }};
-         --dark-bg: {{ theme.dark_bg }};
+         --primary-color: #e74c3c;
+         --dark-bg: #121212;
          --dark-card: #1e1e1e;
-         --light-bg: {{ theme.light_bg }};
-         --light-primary: {{ theme.primary_color }};
+         --light-bg: #f5f7fa;
+         --light-primary: #e74c3c;
          --transition-time: 0.3s;
       }
 
@@ -139,7 +140,7 @@
       }
 
       .mobile-top-card {
-         background-color: var(--dark-card);
+         background-color: #121212;
          border-radius: 8px;
          padding: 20px;
          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -167,40 +168,41 @@
 
       .floating-menu {
          position: fixed;
-         top: 70px;
-         right: 15px;
+         top: 60px;
+         right: 0px;
          background-color: var(--dark-card);
          border-radius: 8px;
          padding: 15px;
-         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
-         z-index: 100;
-         display: none;
-         width: calc(100% - 30px);
-         max-width: 300px;
+         z-index: 10;
+         visibility: hidden;
+         opacity: 0;
+         width: 105px;
+         max-width: calc(100% - 30px);
          color: white;
-         will-change: opacity, transform;
-         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+         will-change: opacity, transform, visibility;
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
          contain: layout style;
          transform-origin: top right;
-         border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-
-      .floating-menu.active {
-         display: block;
-         animation: menuAppear 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-         opacity: 0;
+         min-width: 0;
          transform: scale(0.9);
       }
 
-      @keyframes menuAppear {
-         to {
-            opacity: 1;
-            transform: scale(1);
-         }
+      .floating-menu.active {
+         visibility: visible;
+         opacity: 1;
+         transform: scale(1);
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+      }
+
+      .floating-menu.closing {
+         visibility: visible;
+         opacity: 0;
+         transform: scale(0.9);
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
       }
 
       .menu-items {
-         margin-top: 30px;
+         margin-top: 0px;
       }
 
       .menu-item {
@@ -212,6 +214,8 @@
          transition: color 0.2s ease-out, transform 0.2s ease-out;
          will-change: color, transform;
          contain: layout style;
+         text-decoration: none;
+         display: block;
       }
 
       .menu-item:hover {
@@ -747,7 +751,6 @@
       .search-input {
          width: 100%;
          padding: 15px 20px;
-         padding-right: 50px;
          background-color: rgba(255, 255, 255, 0.1);
          border: 2px solid rgba(255, 255, 255, 0.2);
          border-radius: 8px;
@@ -798,7 +801,7 @@
          background-color: rgba(255, 255, 255, 0.1);
          color: white;
          border: none;
-         border-radius: 6px;
+         border-radius: 5px;
          cursor: pointer;
          font-size: 14px;
          transition: all 0.2s ease;
@@ -809,7 +812,6 @@
 
       .search-option:hover {
          background-color: rgba(255, 255, 255, 0.2);
-         transform: translateY(-2px);
       }
 
       .search-option.active {
@@ -907,11 +909,11 @@
       }
 
       .light-mode .special-card {
-         background: linear-gradient(135deg, #e6e6fa, #d8bfd8);
+         background: linear-gradient(135deg, #d8bfd8, #dda0dd);
       }
 
       .light-mode .special-card.expanded {
-         background: linear-gradient(135deg, #d8bfd8, #dda0dd);
+         background: linear-gradient(135deg, #dda0dd, #eeb1ee);
       }
 
       .light-mode .special-card-item {
@@ -943,11 +945,6 @@
 
       .light-mode .special-card-title {
          color: white;
-      }
-
-      .light-mode .floating-menu {
-         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-         border: 1px solid rgba(0, 0, 0, 0.1);
       }
 
       .light-mode .search-overlay {
@@ -1037,33 +1034,30 @@
    </style>
 </head>
 
-<body class="{{ 'light-mode' if theme.mode == 'light' else 'dark-mode' }}">
+<body class="dark-mode">
    <div class="container">
       <div class="mobile-layout">
 
          <div class="mobile-top-section expanded" id="mobileTopSection">
             <div class="mobile-top-bar">
                <div class="avatar" role="img" aria-label="Img">
-                  <img src="{{ blog.avatar }}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+                  <img src="{{AVATAR_URL}}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                </div>
                <div class="mobile-title-container" id="titleToggle" tabindex="0" role="button" aria-label="收起标题">
-                  <div class="mobile-title">{{ blog.name }}</div>
+                  <div class="mobile-title">{{BLOG_NAME}}</div>
                </div>
                <button class="menu-btn" id="menuBtn" aria-label="浮动菜单" aria-expanded="false"
                                                                                                                                        aria-controls="floatingMenu">≡</button>
             </div>
             <div class="mobile-top-card">
-               <h2>Welcome</h2>
-               <p>{{ blog.description }}</p>
+               <h2>{{BLOG_NAME}}</h2>
+               <p>{{BLOG_DESCRIPTION}}</p>
             </div>
 
             <div class="floating-menu" id="floatingMenu" role="menu" aria-hidden="true">
-               <div class="menu-items">
-                  {% for item in menu_items %}
-                  <div class="menu-item" role="menuitem" tabindex="0" onclick="window.location.href='{{ item.url }}'" style="{{ 'cursor:pointer;' if item.url else 'cursor:default;' }}">{{ item.display }}</div>
-                  {% endfor %}
-                  <div class="menu-item" id="searchMenuItem" role="menuitem" tabindex="0">Search</div>
-                  <div class="menu-item" id="darkModeToggle" role="menuitem" tabindex="0">{{ '夜间模式' if theme.mode == 'light' else '日间模式' }}</div>
+               <div class="menu-items" id="menuItems">
+                  <div class="menu-item" id="searchMenuItem" role="menuitem" tabindex="0">搜索</div>
+                  <div class="menu-item" id="darkModeToggle" role="menuitem" tabindex="0">日间模式</div>
                </div>
             </div>
          </div>
@@ -1101,48 +1095,18 @@
    </div>
 
    <script>
-      // ==================== 常量定义 ====================
-      const SEARCH_TYPES = {
-          TITLE: 'title',
-          TAG: 'tag',
-          CONTENT: 'content'
-      };
-
       // ==================== 数据与状态管理 ====================
       const blogData = {
-          articles: [
-              {% for article in articles %}
-              {
-                  id: '{{ article.id }}',
-                  title: '{{ article.title|escapejs }}',
-                  tags: {{ article.tags|tojson }},
-                  verticalTitle: '{{ article.verticalTitle|escapejs }}',
-                  date: '{{ article.date }}',
-                  content: {{ article.content|tojson }},
-                  url: '{{ article.url }}',
-                  gradient: {{ article.gradient|tojson }}
-              }{% if not loop.last %},{% endif %}
-              {% endfor %}
-          ],
-          specials: [
-              {% for special in specials %}
-              {
-                  id: '{{ special.id }}',
-                  title: '{{ special.title|escapejs }}',
-                  tags: {{ special.tags|tojson }},
-                  content: {{ special.content|tojson }},
-                  url: '{{ special.url }}',
-                  gradient: {{ special.gradient|tojson }}
-              }{% if not loop.last %},{% endif %}
-              {% endfor %}
-          ]
+          articles: [/* 这里会被替换为实际文章数据 */],
+          specials: [/* 这里会被替换为实际Special数据 */]
       };
 
+      const menuItems = [/* 这里会被替换为菜单项数据 */];
       const state = {
           isSearchMode: false,
           originalArticles: [...blogData.articles],
           currentArticles: [],
-          searchType: SEARCH_TYPES.TITLE
+          searchType: 'title'
       };
 
       // ==================== 工具函数 ====================
@@ -1164,37 +1128,21 @@
           keyword = keyword.trim().toLowerCase();
           
           return articles.filter(article => {
-              if (type === SEARCH_TYPES.TITLE) {
+              if (type === 'title') {
                   return article.title.toLowerCase().includes(keyword);
               } 
-              else if (type === SEARCH_TYPES.TAG) {
+              else if (type === 'tag') {
                   const keywords = keyword.split(' ').filter(k => k.trim() !== '');
                   if (keywords.length === 0) return true;
                   return keywords.some(k => 
                       article.tags.some(tag => tag.toLowerCase().includes(k))
                   );
               } 
-              else if (type === SEARCH_TYPES.CONTENT) {
+              else if (type === 'content') {
                   return article.content.some(c => c.toLowerCase().includes(keyword));
               }
               return true;
           });
-      }
-
-      // 检查是否需要只显示内容模式
-      function shouldShowOnlyContent(special) {
-          // 检查是否只有一个特殊卡片
-          if (blogData.specials.length !== 1) return false;
-          
-          // 检查标题和标签是否为空
-          const hasTitle = special.title && special.title.trim() !== '';
-          const hasTags = special.tags && special.tags.length > 0;
-          
-          // 检查是否有内容
-          const hasContent = special.content && special.content.length > 0;
-          
-          // 如果有内容，但没标题和标签，就显示为只内容模式
-          return hasContent && !hasTitle && !hasTags;
       }
 
       // ==================== 渲染函数 ====================
@@ -1202,12 +1150,9 @@
           const wrapper = document.getElementById('mobileCardsWrapper');
           wrapper.innerHTML = '';
 
-          if (articles.length === 0) {
-              wrapper.innerHTML = '<div style="color: rgba(255,255,255,0.5); text-align: center; width: 100%; padding: 20px;">没有文章</div>';
-              return;
-          }
-
-          articles.forEach((article, index) => {
+          const sortedArticles = sortArticlesByDateDesc([...articles]);
+          
+          sortedArticles.forEach((article, index) => {
               const card = document.createElement('article');
               card.className = 'rectangle-card';
               card.id = `card${index + 1}`;
@@ -1215,7 +1160,7 @@
               card.setAttribute('aria-labelledby', `card${index + 1}Title`);
 
               card.innerHTML = `
-                  <div class="vertical-title">${article.verticalTitle || (article.tags.length > 0 ? article.tags[0] : '')}</div>
+                  <div class="vertical-title">${article.verticalTitle || article.tags[0]}</div>
                   <div class="card-content-expanded">
                       <div class="card-tags">
                           ${article.date ? `<span class="card-tag date-tag">${article.date}</span>` : ''}
@@ -1228,7 +1173,7 @@
                           ${article.content.map(p => `<p>${p}</p>`).join('')}
                       </div>
                       <div class="card-footer">
-                          <button class="mobile-card-btn" onclick="window.location.href='${article.url}'">Read</button>
+                          <button class="mobile-card-btn" onclick="window.open('${article.url}', '_blank')">Read</button>
                       </div>
                   </div>
               `;
@@ -1290,7 +1235,7 @@
 
                   item.innerHTML = `
                       <div class="special-card-item-content">
-                          ${special.tags.length > 0 ? `
+                          ${special.tags && special.tags.length > 0 ? `
                           <div class="card-tags">
                               ${special.tags.map(tag => `<span class="card-tag">${tag}</span>`).join('')}
                           </div>
@@ -1311,6 +1256,53 @@
                   container.appendChild(item);
               });
           }
+      }
+
+      function shouldShowOnlyContent(special) {
+          // 检查是否只有一个特殊卡片
+          if (blogData.specials.length !== 1) return false;
+          
+          // 检查标题和标签是否为空
+          const hasTitle = special.title && special.title.trim() !== '';
+          const hasTags = special.tags && special.tags.length > 0;
+          
+          // 检查是否有内容
+          const hasContent = special.content && special.content.length > 0;
+          
+          // 如果有内容，但没标题和标签，就显示为只内容模式
+          return hasContent && !hasTitle && !hasTags;
+      }
+
+      // 渲染动态菜单项
+      function renderDynamicMenuItems() {
+          const menuItemsContainer = document.getElementById('menuItems');
+          const searchItem = document.getElementById('searchMenuItem');
+          const themeToggle = document.getElementById('darkModeToggle');
+          
+          // 清空现有菜单项（除了搜索和主题切换）
+          while (menuItemsContainer.firstChild) {
+              menuItemsContainer.removeChild(menuItemsContainer.firstChild);
+          }
+          
+          // 重新添加搜索项
+          menuItemsContainer.appendChild(searchItem);
+          
+          // 添加动态菜单项
+          menuItems.forEach(item => {
+              const menuItem = document.createElement('a');
+              menuItem.className = 'menu-item';
+              menuItem.setAttribute('role', 'menuitem');
+              menuItem.setAttribute('tabindex', '0');
+              menuItem.setAttribute('href', item.url || '#');
+              menuItem.textContent = item.display;
+              menuItemsContainer.appendChild(menuItem);
+          });
+          
+          // 重新添加主题切换项
+          menuItemsContainer.appendChild(themeToggle);
+          
+          // 重新绑定事件
+          bindMenuEvents();
       }
 
       // ==================== 搜索功能 ====================
@@ -1383,22 +1375,33 @@
       }
 
       function openFloatingMenu() {
-          document.getElementById('floatingMenu').classList.add('active');
+          const menu = document.getElementById('floatingMenu');
+          menu.classList.remove('closing');
+          menu.classList.add('active');
           document.getElementById('menuBtn').setAttribute('aria-expanded', 'true');
-          document.getElementById('floatingMenu').setAttribute('aria-hidden', 'false');
+          menu.setAttribute('aria-hidden', 'false');
       }
 
       function closeFloatingMenu() {
-          document.getElementById('floatingMenu').classList.remove('active');
-          document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
-          document.getElementById('floatingMenu').setAttribute('aria-hidden', 'true');
+          const menu = document.getElementById('floatingMenu');
+          if (menu.classList.contains('active')) {
+              // 先添加关闭动画类
+              menu.classList.add('closing');
+              menu.classList.remove('active');
+              
+              // 动画结束后完全隐藏菜单
+              setTimeout(() => {
+                  menu.classList.remove('closing');
+                  menu.setAttribute('aria-hidden', 'true');
+                  document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
+              }, 250); // 动画时间250ms
+          }
       }
 
       function toggleFloatingMenu() {
           const menu = document.getElementById('floatingMenu');
-          const btn = document.getElementById('menuBtn');
           
-          if (menu.classList.contains('active')) {
+          if (menu.classList.contains('active') || menu.classList.contains('closing')) {
               closeFloatingMenu();
           } else {
               openFloatingMenu();
@@ -1408,7 +1411,6 @@
       function toggleTheme() {
           const body = document.body;
           const btn = document.getElementById('darkModeToggle');
-          const icon = btn.querySelector('i');
 
           body.classList.toggle('dark-mode');
           body.classList.toggle('light-mode');
@@ -1426,17 +1428,24 @@
 
       // ==================== 事件绑定 ====================
       function bindEvents() {
+          // 搜索菜单项点击事件
           document.getElementById('searchMenuItem').addEventListener('click', () => {
               openSearchOverlay();
               closeFloatingMenu();
           });
 
-          document.getElementById('menuBtn').addEventListener('click', toggleFloatingMenu);
+          // 菜单按钮点击事件
+          document.getElementById('menuBtn').addEventListener('click', (e) => {
+              e.stopPropagation();
+              toggleFloatingMenu();
+          });
 
+          // 搜索输入框事件
           document.getElementById('searchInput').addEventListener('keypress', (e) => {
               if (e.key === 'Enter') performSearch();
           });
 
+          // 键盘事件
           document.addEventListener('keydown', (e) => {
               if (e.key === 'Escape') {
                   const overlay = document.getElementById('searchOverlay');
@@ -1450,28 +1459,48 @@
               }
           });
 
+          // 搜索选项点击事件 - 修改为保持输入框焦点
           document.querySelectorAll('#searchOptions .search-option').forEach(btn => {
-              btn.addEventListener('click', () => {
+              btn.addEventListener('click', (e) => {
+                  e.preventDefault();
                   document.querySelectorAll('#searchOptions .search-option').forEach(b => b.classList.remove('active'));
                   btn.classList.add('active');
                   state.searchType = btn.dataset.type;
+                  
+                  // 重新聚焦到搜索输入框
+                  setTimeout(() => {
+                      document.getElementById('searchInput').focus();
+                  }, 10);
               });
           });
 
+          // 搜索遮罩点击事件
           document.getElementById('searchOverlay').addEventListener('click', (e) => {
               if (e.target === e.currentTarget) closeSearchOverlay();
           });
 
+          // 全局点击事件 - 修复：点击非菜单区域时关闭菜单
           document.addEventListener('click', (e) => {
               const menu = document.getElementById('floatingMenu');
               const btn = document.getElementById('menuBtn');
-              if (!menu.contains(e.target) && !btn.contains(e.target) && menu.classList.contains('active')) {
+              
+              // 如果点击的不是菜单本身也不是菜单按钮，且菜单是打开的，则关闭菜单
+              if (!menu.contains(e.target) && !btn.contains(e.target) && 
+                  (menu.classList.contains('active') || menu.classList.contains('closing'))) {
                   closeFloatingMenu();
               }
           });
 
+          // 阻止菜单内部的点击事件冒泡，避免立即关闭菜单
+          const floatingMenu = document.getElementById('floatingMenu');
+          floatingMenu.addEventListener('click', (e) => {
+              e.stopPropagation();
+          });
+
+          // 主题切换事件
           document.getElementById('darkModeToggle').addEventListener('click', toggleTheme);
 
+          // 标题点击事件
           document.getElementById('titleToggle').addEventListener('click', () => {
               if (state.isSearchMode) {
                   exitSearchMode();
@@ -1501,6 +1530,21 @@
           }
       }
 
+      // 绑定菜单事件
+      function bindMenuEvents() {
+          // 绑定动态菜单项的点击事件
+          const menuItemsContainer = document.getElementById('menuItems');
+          const menuItemElements = menuItemsContainer.querySelectorAll('.menu-item');
+          
+          menuItemElements.forEach(item => {
+              if (item.id !== 'searchMenuItem' && item.id !== 'darkModeToggle') {
+                  item.addEventListener('click', () => {
+                      closeFloatingMenu();
+                  });
+              }
+          });
+      }
+
       // ==================== 页面初始化 ====================
       document.addEventListener('DOMContentLoaded', () => {
           state.originalArticles = [...blogData.articles];
@@ -1509,12 +1553,14 @@
           const sortedArticles = sortArticlesByDateDesc([...blogData.articles]);
           renderArticles(sortedArticles, false);
           renderSpecialCards();
+          
+          // 渲染动态菜单项
+          renderDynamicMenuItems();
 
           bindEvents();
       });
 
    </script>
-
 </body>
 
 </html>
