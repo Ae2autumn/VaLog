@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <meta name="description" content="{{ blog.description }}">
+   <title>{{ blog.name }}</title>
+   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style"
+                                                                                                                           onload="this.onload=null;this.rel='stylesheet'">
+   <noscript>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   </noscript>
+   <style>
+      :root {
+         --primary-color: {{ theme.primary_color }};
+         --dark-bg: {{ theme.dark_bg }};
+         --dark-card: #1e1e1e;
+         --light-bg: {{ theme.light_bg }};
+         --light-primary: {{ theme.primary_color }};
+         --transition-time: 0.3s;
+      }
+
+      * {
+         margin: 0;
+         padding: 0;
+         box-sizing: border-box;
+         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, sans-serif;
+      }
+
+      html,
+      body {
+         height: 100%;
+         background-color: var(--dark-bg);
+         color: #ffffff;
+         line-height: 1.6;
+         transition: background-color var(--transition-time), color var(--transition-time);
+      }
+
+      .container {
+         max-width: 1200px;
+         margin: 0 auto;
+         padding: 13px;
+         height: 100%;
+      }
+
+      .mobile-layout {
+         display: flex;
+         flex-direction: column;
+         height: 100%;
+         overflow: hidden;
+         position: relative;
+      }
+
+      .mobile-top-section {
+         background-color: var(--dark-card);
+         border-radius: 10px;
+         margin-bottom: 5px;
+         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         flex-shrink: 0;
+         contain: layout style;
+         will-change: height, padding;
+         z-index: 10;
+         position: relative;
+      }
+
+      .mobile-top-section.expanded {
+         padding: 10px 15px 15px;
+         max-height: 265px;
+      }
+
+      .mobile-top-section.collapsed {
+         padding: 10px 15px 0px;
+         min-height: 50px;
+      }
+
+      .mobile-top-bar {
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+         margin-bottom: 10px;
+         min-height: 40px;
+      }
+
+      .avatar {
+         width: 40px;
+         height: 40px;
+         border-radius: 50%;
+         background-color: var(--primary-color);
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         color: white;
+         font-size: 18px;
+         flex-shrink: 0;
+         will-change: transform, background-color;
+         transition: transform 0.2s ease-out, background-color var(--transition-time);
+         contain: layout style;
+      }
+
+      .mobile-title-container {
+         flex-grow: 1;
+         text-align: center;
+         cursor: pointer;
+         padding: 0 15px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         min-height: 40px;
+      }
+
+      .mobile-title {
+         color: white;
+         font-size: 18px;
+         font-weight: 600;
+         transition: all var(--transition-time) ease;
+      }
+
+      .menu-btn {
+         width: 36px;
+         height: 36px;
+         border-radius: 50%;
+         background-color: transparent;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         color: white;
+         font-size: 18px;
+         cursor: pointer;
+         flex-shrink: 0;
+         border: none;
+         outline: none;
+         will-change: transform, background-color;
+         transition: transform 0.2s ease-out, background-color var(--transition-time);
+         contain: layout style;
+         z-index: 1002;
+         position: relative;
+      }
+
+      .mobile-top-card {
+         background-color: var(--dark-card);
+         border-radius: 8px;
+         padding: 20px;
+         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         max-height: 190px;
+         overflow: hidden;
+         color: white;
+         will-change: max-height, opacity, transform;
+         contain: layout style;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .mobile-top-section.collapsed .mobile-top-card {
+         max-height: 0;
+         padding: 0;
+         margin: 0;
+         opacity: 0;
+         transform: translateY(-10px);
+      }
+
+      .floating-menu {
+         position: fixed;
+         top: 70px;
+         right: 15px;
+         background-color: var(--dark-card);
+         border-radius: 8px;
+         padding: 15px;
+         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+         z-index: 100;
+         display: none;
+         width: calc(100% - 30px);
+         max-width: 300px;
+         color: white;
+         will-change: opacity, transform;
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+         contain: layout style;
+         transform-origin: top right;
+         border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .floating-menu.active {
+         display: block;
+         animation: menuAppear 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+         opacity: 0;
+         transform: scale(0.9);
+      }
+
+      @keyframes menuAppear {
+         to {
+            opacity: 1;
+            transform: scale(1);
+         }
+      }
+
+      .menu-items {
+         margin-top: 30px;
+      }
+
+      .menu-item {
+         padding: 10px 0;
+         border-bottom: 1px solid #333;
+         font-size: 16px;
+         cursor: pointer;
+         color: white;
+         transition: color 0.2s ease-out, transform 0.2s ease-out;
+         will-change: color, transform;
+         contain: layout style;
+      }
+
+      .menu-item:hover {
+         color: var(--primary-color);
+         transform: translateX(5px);
+      }
+
+      .article-list-section {
+         flex: 1 1 0;
+         min-height: 0;
+         display: flex;
+         flex-direction: column;
+         overflow: hidden;
+         will-change: transform;
+         contain: layout style;
+         z-index: 1;
+         position: relative;
+      }
+
+      .mobile-cards-container {
+         flex: 1;
+         display: flex;
+         flex-direction: column;
+         min-height: 0;
+         overflow: hidden;
+      }
+
+      .mobile-cards-wrapper {
+         flex: 1;
+         display: flex;
+         gap: 15px;
+         padding: 10px 5px 15px;
+         overflow-x: auto;
+         overflow-y: hidden;
+         -ms-overflow-style: none;
+         scrollbar-width: none;
+         will-change: transform;
+         backface-visibility: hidden;
+         -webkit-backface-visibility: hidden;
+         transform: translateZ(0);
+         -webkit-transform: translateZ(0);
+         contain: layout style paint;
+         z-index: 1;
+      }
+
+      .mobile-cards-wrapper::-webkit-scrollbar {
+         display: none;
+      }
+
+      .rectangle-card {
+         min-width: 82px;
+         height: 100%;
+         border-radius: 10px;
+         cursor: pointer;
+         transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+         position: relative;
+         overflow: hidden;
+         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+         flex-shrink: 0;
+         will-change: transform, min-width;
+         contain: layout style;
+         background: linear-gradient(135deg, var(--primary-color), #c0392b);
+         z-index: 1;
+      }
+
+      .rectangle-card.active {
+         min-width: 279px;
+         background: linear-gradient(135deg, #c0392b, #a93226);
+         z-index: 2;
+      }
+
+      .vertical-title {
+         letter-spacing: 0.1em;
+         position: absolute;
+         top: 20px;
+         left: 13px;
+         color: white;
+         font-size: 18px;
+         font-weight: bold;
+         writing-mode: vertical-rl;
+         text-orientation: mixed;
+         transform: rotate(0deg);
+         transition: opacity var(--transition-time) ease;
+         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+      }
+
+      .rectangle-card.active .vertical-title {
+         opacity: 0;
+      }
+
+      .card-content-expanded {
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 279px;
+         height: 100%;
+         padding: 15px;
+         color: white;
+         opacity: 0;
+         transition: opacity var(--transition-time) ease 0.2s;
+         display: flex;
+         flex-direction: column;
+         overflow: hidden;
+      }
+
+      .rectangle-card.active .card-content-expanded {
+         opacity: 1;
+      }
+
+      .card-tags {
+         display: flex;
+         gap: 8px;
+         margin-bottom: 10px;
+         flex-shrink: 0;
+         flex-wrap: wrap;
+      }
+
+      .card-tag {
+         background-color: rgba(255, 255, 255, 0.1);
+         color: white;
+         padding: 4px 8px;
+         border-radius: 4px;
+         font-size: 12px;
+         font-weight: 500;
+         will-change: transform, background-color;
+         transition: transform 0.2s ease-out, background-color 0.2s ease-out;
+         contain: layout style;
+         width: auto;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         max-width: 200px;
+      }
+
+      .date-tag {
+         font-weight: 500;
+         padding-left: 6px;
+      }
+
+      .card-title-container {
+         flex-shrink: 0;
+         margin-bottom: 10px;
+         overflow: hidden;
+      }
+
+      .card-title-container h2 {
+         font-size: 22px;
+         font-weight: 600;
+         color: white;
+         margin: 0;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         display: -webkit-box;
+         -webkit-line-clamp: 2;
+         -webkit-box-orient: vertical;
+         word-break: break-word;
+      }
+
+      .card-content-main {
+         flex: 1;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         margin-bottom: 10px;
+         padding-right: 5px;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .card-content-main::-webkit-scrollbar {
+         display: none;
+      }
+
+      .card-content-main p {
+         font-size: 14px;
+         line-height: 1.5;
+         margin-bottom: 10px;
+         opacity: 0.9;
+         color: white;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .card-footer {
+         flex-shrink: 0;
+         padding-top: 10px;
+         display: flex;
+         justify-content: flex-end;
+      }
+
+      .mobile-card-btn {
+         background-color: rgba(255, 255, 255, 0.2);
+         color: white;
+         border: none;
+         padding: 8px 16px;
+         border-radius: 5px;
+         cursor: pointer;
+         font-weight: 500;
+         font-size: 14px;
+         transition: background-color 0.2s ease-out, transform 0.2s ease-out;
+         will-change: transform, background-color;
+         contain: layout style;
+         white-space: nowrap;
+      }
+
+      .special-card {
+         background: linear-gradient(135deg, var(--primary-color), #c0392b);
+         color: white;
+         border-radius: 10px;
+         padding: 15px;
+         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+         cursor: pointer;
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         overflow: hidden;
+         flex-shrink: 0;
+         will-change: transform, background;
+         contain: layout style;
+         z-index: 1;
+         position: relative;
+      }
+
+      .special-card-header {
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+         margin-bottom: 0;
+         padding: 0;
+         cursor: pointer;
+         user-select: none;
+         -webkit-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+      }
+
+      .special-card-title {
+         font-size: 18px;
+         font-weight: 600;
+         color: white;
+         margin: 0;
+         pointer-events: none;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .special-card-content {
+         max-height: 0;
+         opacity: 0;
+         overflow: hidden;
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         will-change: max-height, opacity, margin, padding;
+         contain: layout style;
+         padding-top: 0;
+         margin-top: 0;
+         transform-origin: top;
+      }
+
+      .special-card.expanded .special-card-content {
+         max-height: 320px;
+         opacity: 1;
+         margin-top: 10px;
+      }
+
+      .special-cards-container {
+         display: flex;
+         flex-direction: column;
+         gap: 15px;
+         height: auto;
+         max-height: 194px;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         will-change: transform;
+         padding-right: 0px;
+      }
+
+      .special-cards-container::-webkit-scrollbar {
+         display: none;
+      }
+
+      .special-card-item {
+         background-color: rgba(255, 255, 255, 0.1);
+         border-radius: 8px;
+         padding: 15px;
+         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+         display: flex;
+         flex-direction: column;
+         flex-shrink: 0;
+         height: 187px;
+         overflow: hidden;
+         cursor: auto;
+         will-change: transform, opacity;
+         transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+         contain: layout style;
+      }
+
+      .special-card-item-content {
+         display: flex;
+         flex-direction: column;
+         height: 100%;
+         overflow: hidden;
+      }
+
+      .special-card-item .card-tags {
+         margin-bottom: 8px;
+      }
+
+      .special-card-item h4 {
+         font-size: 16px;
+         font-weight: 600;
+         margin-bottom: 8px;
+         color: white;
+         flex-shrink: 0;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+      }
+
+      .special-card-item-content-main {
+         flex: 1;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         margin-bottom: 8px;
+         padding-right: 5px;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .special-card-item-content-main::-webkit-scrollbar {
+         display: none;
+      }
+
+      .special-card-item-content-main p {
+         font-size: 14px;
+         line-height: 1.5;
+         margin-bottom: 8px;
+         opacity: 0.9;
+         color: white;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .special-card-item-footer {
+         flex-shrink: 0;
+         padding-top: 8px;
+         display: flex;
+         justify-content: flex-end;
+      }
+
+      .special-card-btn {
+         background-color: rgba(255, 255, 255, 0.2);
+         color: white;
+         border: none;
+         padding: 8px 16px;
+         border-radius: 5px;
+         cursor: pointer;
+         font-weight: 500;
+         font-size: 14px;
+         transition: background-color 0.2s ease-out, transform 0.2s ease-out;
+         will-change: transform, background-color;
+         contain: layout style;
+         white-space: nowrap;
+      }
+
+      .special-card.only-content {
+         padding: 0;
+         background: transparent;
+         box-shadow: none;
+         cursor: default;
+         border-radius: 10;
+         height: auto;
+         min-height: 0;
+      }
+
+      .special-card.only-content .special-card-header {
+         display: none;
+      }
+
+      .special-card.only-content .special-card-content {
+         max-height: none;
+         opacity: 1;
+         margin-top: 0;
+         padding: 0;
+         overflow: visible;
+         height: auto;
+         min-height: 0;
+         cursor: auto;
+      }
+
+      .special-card.only-content .special-cards-container {
+         display: block;
+         max-height: none;
+         overflow: visible;
+         gap: 0;
+         height: auto;
+         min-height: 0;
+         padding: 0;
+         margin: 0;
+      }
+
+      .special-card.only-content .special-card-item {
+         background-color: transparent;
+         padding: 0;
+         margin: 0;
+         box-shadow: none;
+         height: auto;
+         min-height: 0;
+         max-height: none;
+         border-radius: 10;
+         cursor: default;
+      }
+
+      .special-card.only-content .special-card-item-content {
+         display: block;
+         height: auto;
+         min-height: 0;
+         max-height: none;
+         overflow: visible;
+         padding: 0;
+         margin: 0;
+      }
+
+      .special-card.only-content .special-card-item-content-main {
+         overflow: visible;
+         max-height: none;
+         height: auto;
+         min-height: 0;
+         padding: 0;
+         margin: 0;
+         color: white;
+         font-size: 16px;
+         line-height: 1.6;
+         opacity: 0.9;
+         font-style: italic;
+         text-align: center;
+         background: transparent;
+         border-radius: 0;
+         cursor: default;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .special-card.only-content .card-tags,
+      .special-card.only-content .special-card-item h4,
+      .special-card.only-content .special-card-item-footer {
+         display: none;
+      }
+
+      .special-card-item-content-simple {
+         color: white;
+         font-size: 16px;
+         line-height: 1.6;
+         opacity: 0.9;
+         font-style: italic;
+         text-align: center;
+         padding: 20px 15px;
+         background: rgba(255, 255, 255, 0.05);
+         border-radius: 8px;
+         cursor: default;
+         width: 100%;
+         box-sizing: border-box;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .search-overlay {
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background-color: rgba(0, 0, 0, 0.8);
+         z-index: 1000;
+         display: none;
+         justify-content: center;
+         align-items: center;
+         opacity: 0;
+         transition: opacity 0.3s ease;
+         backdrop-filter: blur(5px);
+      }
+
+      .search-overlay.active {
+         display: flex;
+         opacity: 1;
+      }
+
+      .search-container {
+         width: 90%;
+         max-width: 500px;
+         height: auto;
+         background-color: var(--dark-card);
+         border-radius: 12px;
+         padding: 25px;
+         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+         transform: translateY(20px);
+         opacity: 0;
+         transition: transform 0.3s ease, opacity 0.3s ease;
+         position: relative;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .search-overlay.active .search-container {
+         transform: translateY(0);
+         opacity: 1;
+      }
+
+      .search-input-container {
+         position: relative;
+         margin-bottom: 20px;
+      }
+
+      .search-input {
+         width: 100%;
+         padding: 15px 20px;
+         padding-right: 50px;
+         background-color: rgba(255, 255, 255, 0.1);
+         border: 2px solid rgba(255, 255, 255, 0.2);
+         border-radius: 8px;
+         color: white;
+         font-size: 16px;
+         outline: none;
+         transition: all 0.3s ease;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .search-input:focus {
+         border-color: var(--primary-color);
+         background-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .search-input.error {
+         border-color: #ff0000 !important;
+         animation: shake 0.5s ease-in-out;
+      }
+
+      @keyframes shake {
+
+         0%,
+         100% {
+            transform: translateX(0);
+         }
+
+         25% {
+            transform: translateX(-5px);
+         }
+
+         75% {
+            transform: translateX(5px);
+         }
+      }
+
+      .search-options {
+         display: flex;
+         gap: 10px;
+         flex-wrap: wrap;
+         justify-content: center;
+      }
+
+      .search-option {
+         padding: 8px 16px;
+         background-color: rgba(255, 255, 255, 0.1);
+         color: white;
+         border: none;
+         border-radius: 6px;
+         cursor: pointer;
+         font-size: 14px;
+         transition: all 0.2s ease;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .search-option:hover {
+         background-color: rgba(255, 255, 255, 0.2);
+         transform: translateY(-2px);
+      }
+
+      .search-option.active {
+         background-color: var(--primary-color);
+         color: white;
+         box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+      }
+
+      .search-mode-indicator {
+         position: absolute;
+         top: 10px;
+         right: 10px;
+         background-color: var(--primary-color);
+         color: white;
+         padding: 5px 10px;
+         border-radius: 4px;
+         font-size: 12px;
+         display: none;
+         z-index: 100;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .light-mode {
+         background-color: var(--light-bg);
+         color: white;
+      }
+
+      .light-mode .mobile-top-section {
+         background-color: var(--light-primary);
+      }
+
+      .light-mode .mobile-top-card {
+         background-color: white;
+         color: gray;
+      }
+
+      .light-mode .mobile-top-card h2 {
+         color: #cdcdcd;
+      }
+
+      .light-mode .floating-menu {
+         background-color: white;
+         color: gray;
+      }
+
+      .light-mode .menu-item {
+         border-bottom-color: #eee;
+         color: gray;
+      }
+
+      .light-mode .menu-item:hover {
+         color: var(--light-primary);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+1) {
+         background: linear-gradient(135deg, #ffb6c1, #ff69b4);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+1).active {
+         background: linear-gradient(135deg, #ff69b4, #ff1493);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+2) {
+         background: linear-gradient(135deg, #98fb98, #90ee90);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+2).active {
+         background: linear-gradient(135deg, #90ee90, #7cfc00);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+3) {
+         background: linear-gradient(135deg, #add8e6, #87ceeb);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+3).active {
+         background: linear-gradient(135deg, #87ceeb, #6495ed);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+4) {
+         background: linear-gradient(135deg, #fffacd, #f0e68c);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+4).active {
+         background: linear-gradient(135deg, #f0e68c, #ffd700);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n) {
+         background: linear-gradient(135deg, #d3d3d3, #c0c0c0);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n).active {
+         background: linear-gradient(135deg, #c0c0c0, #a9a9a9);
+      }
+
+      .light-mode .special-card {
+         background: linear-gradient(135deg, #e6e6fa, #d8bfd8);
+      }
+
+      .light-mode .special-card.expanded {
+         background: linear-gradient(135deg, #d8bfd8, #dda0dd);
+      }
+
+      .light-mode .special-card-item {
+         background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .light-mode .special-card-item h4 {
+         color: white;
+      }
+
+      .light-mode .card-tag {
+         background-color: rgba(0, 0, 0, 0.1);
+         color: white;
+      }
+
+      .light-mode .date-tag {
+         background-color: rgba(0, 0, 0, 0.15) !important;
+         border-left-color: var(--light-primary);
+      }
+
+      .light-mode .vertical-title {
+         color: white;
+         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      .light-mode .rectangle-card.active .card-content-expanded h2 {
+         color: white;
+      }
+
+      .light-mode .special-card-title {
+         color: white;
+      }
+
+      .light-mode .floating-menu {
+         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+         border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      .light-mode .search-overlay {
+         background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .light-mode .search-container {
+         background-color: white;
+         color: #333;
+      }
+
+      .light-mode .search-input {
+         background-color: rgba(0, 0, 0, 0.05);
+         border-color: rgba(0, 0, 0, 0.1);
+         color: #333;
+      }
+
+      .light-mode .search-input:focus {
+         border-color: var(--light-primary);
+         background-color: rgba(0, 0, 0, 0.08);
+      }
+
+      .light-mode .search-input.error {
+         border-color: #ff0000 !important;
+      }
+
+      .light-mode .search-option {
+         background-color: rgba(0, 0, 0, 0.05);
+         color: #333;
+      }
+
+      .light-mode .search-option:hover {
+         background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      .light-mode .search-option.active {
+         background-color: var(--light-primary);
+         color: white;
+         box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+      }
+
+      .menu-btn:active,
+      .close-menu:active,
+      .mobile-card-btn:active,
+      .special-card-btn:active {
+         transform: scale(0.95);
+      }
+
+      .card-tag:hover {
+         transform: translateY(-1px);
+         background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .card-title-container h2:hover {
+         transform: translateX(2px);
+      }
+
+      .special-card-item:hover {
+         transform: translateY(-2px);
+         opacity: 0.95;
+      }
+
+      .special-card-title:hover {
+         transform: translateX(2px);
+      }
+
+      .mobile-top-section,
+      .mobile-top-card,
+      .special-card,
+      .special-card-content,
+      .rectangle-card,
+      .search-overlay,
+      .search-container {
+         backface-visibility: hidden;
+         -webkit-backface-visibility: hidden;
+         perspective: 1000;
+         -webkit-perspective: 1000;
+      }
+
+      .mobile-cards-wrapper,
+      .special-cards-container,
+      .card-content-main,
+      .special-card-item-content-main {
+         scroll-behavior: smooth;
+         -webkit-overflow-scrolling: touch;
+      }
+   </style>
+</head>
+
+<body class="{{ 'light-mode' if theme.mode == 'light' else 'dark-mode' }}">
+   <div class="container">
+      <div class="mobile-layout">
+
+         <div class="mobile-top-section expanded" id="mobileTopSection">
+            <div class="mobile-top-bar">
+               <div class="avatar" role="img" aria-label="Img">
+                  <img src="{{ blog.avatar }}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+               </div>
+               <div class="mobile-title-container" id="titleToggle" tabindex="0" role="button" aria-label="收起标题">
+                  <div class="mobile-title">{{ blog.name }}</div>
+               </div>
+               <button class="menu-btn" id="menuBtn" aria-label="浮动菜单" aria-expanded="false"
+                                                                                                                                       aria-controls="floatingMenu">≡</button>
+            </div>
+            <div class="mobile-top-card">
+               <h2>Welcome</h2>
+               <p>{{ blog.description }}</p>
+            </div>
+
+            <div class="floating-menu" id="floatingMenu" role="menu" aria-hidden="true">
+               <div class="menu-items">
+                  {% for item in menu_items %}
+                  <div class="menu-item" role="menuitem" tabindex="0" onclick="window.location.href='{{ item.url }}'" style="{{ 'cursor:pointer;' if item.url else 'cursor:default;' }}">{{ item.display }}</div>
+                  {% endfor %}
+                  <div class="menu-item" id="searchMenuItem" role="menuitem" tabindex="0">Search</div>
+                  <div class="menu-item" id="darkModeToggle" role="menuitem" tabindex="0">{{ '夜间模式' if theme.mode == 'light' else '日间模式' }}</div>
+               </div>
+            </div>
+         </div>
+
+         <div class="article-list-section" id="articleListSection">
+            <div class="mobile-cards-container">
+               <div class="mobile-cards-wrapper" id="mobileCardsWrapper">
+               </div>
+            </div>
+         </div>
+
+         <section class="special-card" id="specialCard" aria-labelledby="specialCardTitle" aria-expanded="false">
+            <div class="special-card-header">
+               <h3 id="specialCardTitle" class="special-card-title">special</h3>
+            </div>
+            <div class="special-card-content" id="specialCardContent">
+               <div class="special-cards-container" id="specialCardsContainer">
+               </div>
+            </div>
+         </section>
+      </div>
+   </div>
+
+   <div class="search-overlay" id="searchOverlay">
+      <div class="search-container">
+         <div class="search-input-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Enter确认,点击标题退出" autocomplete="off">
+         </div>
+         <div class="search-options" id="searchOptions">
+            <button class="search-option active" data-type="title">标题</button>
+            <button class="search-option" data-type="tag">标签</button>
+            <button class="search-option" data-type="content">简介</button>
+         </div>
+      </div>
+   </div>
+
+   <script>
+      // ==================== 常量定义 ====================
+      const SEARCH_TYPES = {
+          TITLE: 'title',
+          TAG: 'tag',
+          CONTENT: 'content'
+      };
+
+      // ==================== 数据与状态管理 ====================
+      const blogData = {
+          articles: [
+              {% for article in articles %}
+              {
+                  id: '{{ article.id }}',
+                  title: '{{ article.title|escapejs }}',
+                  tags: {{ article.tags|tojson }},
+                  verticalTitle: '{{ article.verticalTitle|escapejs }}',
+                  date: '{{ article.date }}',
+                  content: {{ article.content|tojson }},
+                  url: '{{ article.url }}',
+                  gradient: {{ article.gradient|tojson }}
+              }{% if not loop.last %},{% endif %}
+              {% endfor %}
+          ],
+          specials: [
+              {% for special in specials %}
+              {
+                  id: '{{ special.id }}',
+                  title: '{{ special.title|escapejs }}',
+                  tags: {{ special.tags|tojson }},
+                  content: {{ special.content|tojson }},
+                  url: '{{ special.url }}',
+                  gradient: {{ special.gradient|tojson }}
+              }{% if not loop.last %},{% endif %}
+              {% endfor %}
+          ]
+      };
+
+      const state = {
+          isSearchMode: false,
+          originalArticles: [...blogData.articles],
+          currentArticles: [],
+          searchType: SEARCH_TYPES.TITLE
+      };
+
+      // ==================== 工具函数 ====================
+      function debounce(func, delay) {
+          let timeoutId;
+          return (...args) => {
+              clearTimeout(timeoutId);
+              timeoutId = setTimeout(() => func.apply(this, args), delay);
+          };
+      }
+
+      function sortArticlesByDateDesc(articles) {
+          return articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+
+      function filterArticles(articles, keyword, type) {
+          if (!keyword.trim()) return articles;
+          
+          keyword = keyword.trim().toLowerCase();
+          
+          return articles.filter(article => {
+              if (type === SEARCH_TYPES.TITLE) {
+                  return article.title.toLowerCase().includes(keyword);
+              } 
+              else if (type === SEARCH_TYPES.TAG) {
+                  const keywords = keyword.split(' ').filter(k => k.trim() !== '');
+                  if (keywords.length === 0) return true;
+                  return keywords.some(k => 
+                      article.tags.some(tag => tag.toLowerCase().includes(k))
+                  );
+              } 
+              else if (type === SEARCH_TYPES.CONTENT) {
+                  return article.content.some(c => c.toLowerCase().includes(keyword));
+              }
+              return true;
+          });
+      }
+
+      // 检查是否需要只显示内容模式
+      function shouldShowOnlyContent(special) {
+          // 检查是否只有一个特殊卡片
+          if (blogData.specials.length !== 1) return false;
+          
+          // 检查标题和标签是否为空
+          const hasTitle = special.title && special.title.trim() !== '';
+          const hasTags = special.tags && special.tags.length > 0;
+          
+          // 检查是否有内容
+          const hasContent = special.content && special.content.length > 0;
+          
+          // 如果有内容，但没标题和标签，就显示为只内容模式
+          return hasContent && !hasTitle && !hasTags;
+      }
+
+      // ==================== 渲染函数 ====================
+      function renderArticles(articles = blogData.articles, isSearchMode = false) {
+          const wrapper = document.getElementById('mobileCardsWrapper');
+          wrapper.innerHTML = '';
+
+          if (articles.length === 0) {
+              wrapper.innerHTML = '<div style="color: rgba(255,255,255,0.5); text-align: center; width: 100%; padding: 20px;">没有文章</div>';
+              return;
+          }
+
+          articles.forEach((article, index) => {
+              const card = document.createElement('article');
+              card.className = 'rectangle-card';
+              card.id = `card${index + 1}`;
+              card.setAttribute('role', 'article');
+              card.setAttribute('aria-labelledby', `card${index + 1}Title`);
+
+              card.innerHTML = `
+                  <div class="vertical-title">${article.verticalTitle || (article.tags.length > 0 ? article.tags[0] : '')}</div>
+                  <div class="card-content-expanded">
+                      <div class="card-tags">
+                          ${article.date ? `<span class="card-tag date-tag">${article.date}</span>` : ''}
+                          ${article.tags.map(tag => `<span class="card-tag">${tag}</span>`).join('')}
+                      </div>
+                      <div class="card-title-container">
+                          <h2 id="card${index + 1}Title">${article.title}</h2>
+                      </div>
+                      <div class="card-content-main">
+                          ${article.content.map(p => `<p>${p}</p>`).join('')}
+                      </div>
+                      <div class="card-footer">
+                          <button class="mobile-card-btn" onclick="window.location.href='${article.url}'">Read</button>
+                      </div>
+                  </div>
+              `;
+
+              // 根据模式决定默认展开哪个卡片
+              if ((!isSearchMode && index === 1) || (isSearchMode && index === 0)) {
+                  setTimeout(() => {
+                      card.classList.add('active');
+                  }, 100);
+              }
+
+              card.addEventListener('click', (e) => {
+                  if (e.target.closest('.mobile-card-btn')) return;
+                  card.classList.toggle('active');
+                  document.querySelectorAll('.rectangle-card').forEach(c => {
+                      if (c !== card) c.classList.remove('active');
+                  });
+              });
+
+              wrapper.appendChild(card);
+          });
+      }
+
+      function renderSpecialCards() {
+          const container = document.getElementById('specialCardsContainer');
+          container.innerHTML = '';
+          const specialCard = document.getElementById('specialCard');
+
+          // 检查是否需要只显示内容模式
+          if (blogData.specials.length === 1 && shouldShowOnlyContent(blogData.specials[0])) {
+              // 只显示内容模式
+              const special = blogData.specials[0];
+              
+              // 添加只显示内容的类
+              specialCard.classList.add('only-content');
+              // 设置标题为不可点击
+              document.querySelector('.special-card-header').style.cursor = 'default';
+              // 默认展开内容区域
+              specialCard.classList.add('expanded');
+              specialCard.setAttribute('aria-expanded', 'true');
+              
+              const item = document.createElement('div');
+              item.className = 'special-card-item-content-simple';
+              
+              // 只显示内容，不显示标题、标签和按钮
+              item.innerHTML = `
+                  <p>${special.content.map(p => `<p>${p}</p>`).join('')}</p>
+              `;
+              
+              container.appendChild(item);
+          } else {
+              // 正常模式
+              specialCard.classList.remove('only-content');
+              document.querySelector('.special-card-header').style.cursor = 'pointer';
+              
+              blogData.specials.forEach(special => {
+                  const item = document.createElement('div');
+                  item.className = 'special-card-item';
+
+                  item.innerHTML = `
+                      <div class="special-card-item-content">
+                          ${special.tags.length > 0 ? `
+                          <div class="card-tags">
+                              ${special.tags.map(tag => `<span class="card-tag">${tag}</span>`).join('')}
+                          </div>
+                          ` : ''}
+                          ${special.title ? `<h4>${special.title}</h4>` : ''}
+                          <div class="special-card-item-content-main">
+                              ${special.content.map(p => `<p>${p}</p>`).join('')}
+                          </div>
+                          ${special.url ? `
+                          <div class="special-card-item-footer">
+                              <button class="special-card-btn"
+                              onclick="window.open('${special.url}', '_blank')">Visit</button>
+                          </div>
+                          ` : ''}
+                      </div>
+                  `;
+
+                  container.appendChild(item);
+              });
+          }
+      }
+
+      // ==================== 搜索功能 ====================
+      function enterSearchMode(filteredArticles) {
+          state.isSearchMode = true;
+          state.currentArticles = filteredArticles;
+          const sortedArticles = sortArticlesByDateDesc([...filteredArticles]);
+          renderArticles(sortedArticles, true);
+          closeSearchOverlay();
+      }
+
+      function exitSearchMode() {
+          state.isSearchMode = false;
+          state.currentArticles = [];
+          const originalSorted = sortArticlesByDateDesc([...blogData.articles]);
+          renderArticles(originalSorted, false);
+          closeSearchOverlay();
+      }
+
+      function performSearch() {
+          const input = document.getElementById('searchInput');
+          const keyword = input.value.trim();
+          const searchType = state.searchType;
+
+          if (!keyword) {
+              showSearchError('未输入');
+              return;
+          }
+
+          let filtered = filterArticles(blogData.articles, keyword, searchType);
+          
+          if (filtered.length === 0) {
+              showSearchError(`没有符合"${keyword}"的文章`);
+              return;
+          }
+
+          enterSearchMode(filtered);
+      }
+
+      function showSearchError(message) {
+          const input = document.getElementById('searchInput');
+          input.value = '';
+          input.placeholder = message;
+          input.classList.add('error');
+          
+          const restoreOnNextInput = () => {
+              input.classList.remove('error');
+              input.placeholder = 'Enter确认,点击标题退出';
+              input.removeEventListener('input', restoreOnNextInput);
+          };
+          
+          input.addEventListener('input', restoreOnNextInput);
+      }
+
+      // ==================== UI 交互控制 ====================
+      function openSearchOverlay() {
+          const overlay = document.getElementById('searchOverlay');
+          const input = document.getElementById('searchInput');
+
+          input.value = '';
+          input.placeholder = 'Enter确认,点击标题退出';
+          input.classList.remove('error');
+
+          overlay.classList.add('active');
+          input.focus();
+      }
+
+      function closeSearchOverlay() {
+          document.getElementById('searchOverlay').classList.remove('active');
+      }
+
+      function openFloatingMenu() {
+          document.getElementById('floatingMenu').classList.add('active');
+          document.getElementById('menuBtn').setAttribute('aria-expanded', 'true');
+          document.getElementById('floatingMenu').setAttribute('aria-hidden', 'false');
+      }
+
+      function closeFloatingMenu() {
+          document.getElementById('floatingMenu').classList.remove('active');
+          document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
+          document.getElementById('floatingMenu').setAttribute('aria-hidden', 'true');
+      }
+
+      function toggleFloatingMenu() {
+          const menu = document.getElementById('floatingMenu');
+          const btn = document.getElementById('menuBtn');
+          
+          if (menu.classList.contains('active')) {
+              closeFloatingMenu();
+          } else {
+              openFloatingMenu();
+          }
+      }
+
+      function toggleTheme() {
+          const body = document.body;
+          const btn = document.getElementById('darkModeToggle');
+          const icon = btn.querySelector('i');
+
+          body.classList.toggle('dark-mode');
+          body.classList.toggle('light-mode');
+
+          if (body.classList.contains('light-mode')) {
+              btn.innerHTML = '夜间模式';
+              localStorage.setItem('theme', 'light');
+          } else {
+              btn.innerHTML = '日间模式';
+              localStorage.setItem('theme', 'dark');
+          }
+
+          closeFloatingMenu();
+      }
+
+      // ==================== 事件绑定 ====================
+      function bindEvents() {
+          document.getElementById('searchMenuItem').addEventListener('click', () => {
+              openSearchOverlay();
+              closeFloatingMenu();
+          });
+
+          document.getElementById('menuBtn').addEventListener('click', toggleFloatingMenu);
+
+          document.getElementById('searchInput').addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') performSearch();
+          });
+
+          document.addEventListener('keydown', (e) => {
+              if (e.key === 'Escape') {
+                  const overlay = document.getElementById('searchOverlay');
+                  if (overlay.classList.contains('active')) {
+                      closeSearchOverlay();
+                  }
+                  const floatingMenu = document.getElementById('floatingMenu');
+                  if (floatingMenu.classList.contains('active')) {
+                      closeFloatingMenu();
+                  }
+              }
+          });
+
+          document.querySelectorAll('#searchOptions .search-option').forEach(btn => {
+              btn.addEventListener('click', () => {
+                  document.querySelectorAll('#searchOptions .search-option').forEach(b => b.classList.remove('active'));
+                  btn.classList.add('active');
+                  state.searchType = btn.dataset.type;
+              });
+          });
+
+          document.getElementById('searchOverlay').addEventListener('click', (e) => {
+              if (e.target === e.currentTarget) closeSearchOverlay();
+          });
+
+          document.addEventListener('click', (e) => {
+              const menu = document.getElementById('floatingMenu');
+              const btn = document.getElementById('menuBtn');
+              if (!menu.contains(e.target) && !btn.contains(e.target) && menu.classList.contains('active')) {
+                  closeFloatingMenu();
+              }
+          });
+
+          document.getElementById('darkModeToggle').addEventListener('click', toggleTheme);
+
+          document.getElementById('titleToggle').addEventListener('click', () => {
+              if (state.isSearchMode) {
+                  exitSearchMode();
+              } else {
+                  const topSection = document.getElementById('mobileTopSection');
+                  topSection.classList.toggle('expanded');
+                  topSection.classList.toggle('collapsed');
+              }
+          });
+
+          // 特殊卡片点击事件
+          const specialCardHeader = document.querySelector('.special-card-header');
+          if (specialCardHeader) {
+              specialCardHeader.addEventListener('click', (e) => {
+                  // 如果只有内容模式，则不展开/折叠
+                  if (blogData.specials.length === 1 && shouldShowOnlyContent(blogData.specials[0])) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return false;
+                  }
+                  
+                  e.stopPropagation();
+                  const card = document.getElementById('specialCard');
+                  card.classList.toggle('expanded');
+                  card.setAttribute('aria-expanded', card.classList.contains('expanded'));
+              });
+          }
+      }
+
+      // ==================== 页面初始化 ====================
+      document.addEventListener('DOMContentLoaded', () => {
+          state.originalArticles = [...blogData.articles];
+          state.currentArticles = blogData.articles;
+
+          const sortedArticles = sortArticlesByDateDesc([...blogData.articles]);
+          renderArticles(sortedArticles, false);
+          renderSpecialCards();
+
+          bindEvents();
+      });
+
+   </script>
+
+</body>
+
+</html>
