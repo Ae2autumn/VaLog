@@ -1,70 +1,55 @@
 #!/usr/bin/env python3
+"""
+VaLog 静态博客生成器 - 单文件实现
+基于 GitHub Issues 的静态博客生成系统
+版本: 修正版
+"""
 
 import os
 import sys
 import json
 import yaml
-import hashlib
 import re
 import markdown
 import requests
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from urllib.parse import urljoin
-import html
-import time
-
 
 class VaLogGenerator:
-    """VaLog 博客生成器主类"""
+    """VaLog博客生成器主类"""
     
-    def __init__(self, config_path: str = "config.yml"):
-        self.config_path = config_path
-        self.config = self.load_config()
+    def __init__(self, config_path="config.yml"):
+        self.config = self.load_config(config_path)
         self.issues = []
         self.articles = []
         self.specials = []
         self.base_data = {}
+        self.github_token = os.environ.get("GITHUB_TOKEN", "")
+        self.github_repo = os.environ.get("GITHUB_REPOSITORY", "")
         
-        # 初始化目录
-        self.init_directories()
-    
-    def init_directories(self):
-        """初始化必要的目录结构"""
-        directories = [
-            "docs/article",
-            "template",
-            "static/custom",
-            "O-MD"
-        ]
-        
-        for directory in directories:
-            os.makedirs(directory, exist_ok=True)
-    
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self, path: str) -> Dict:
         """加载配置文件"""
-        try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
-            
-            # 验证配置
-            errors = self.validate_config(config)
-            if errors:
-                print("配置错误:")
-                for error in errors:
-                    print(f"  - {error}")
-                sys.exit(1)
-            
-            return config
-        except FileNotFoundError:
-            print(f"错误: 配置文件 {self.config_path} 不存在")
+        if not os.path.exists(path):
+            print(f"错误: 配置文件 {path} 不存在")
             sys.exit(1)
-        except yaml.YAMLError as e:
-            print(f"错误: 配置文件格式错误: {e}")
+            
+        with open(path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            
+        # 验证配置
+        errors = self.validate_config(config)
+        if errors:
+            print("配置错误:")
+            for error in errors:
+                print(f"  - {error}")
             sys.exit(1)
+            
+        return config
     
-    def validate_config(self, config: Dict[str, Any]) -> List[str]:
+    def validate_config(self, config: Dict) -> List[str]:
         """验证配置文件"""
         errors = []
         
@@ -73,497 +58,485 @@ class VaLogGenerator:
         if len(floating_menu) > 10:
             errors.append("浮动菜单不能超过10个")
         
-        # 特殊卡片配置验证
-        special_config = config.get('special', {})
-        if not isinstance(special_config.get('top', False), bool):
-            errors.append("special.top 必须是布尔值")
+        # 主题模式验证
+        theme_mode = config.get('theme', {}).get('mode', 'dark')
+        if theme_mode not in ['dark', 'light']:
+            errors.append("theme.mode 必须是 'dark' 或 'light'")
         
-        # 主题配置验证
-        theme_config = config.get('theme', {})
-        if theme_config.get('mode') not in ['default', 'light']:
-            errors.append("theme.mode 必须是 'default' 或 'light'")
+        # 颜色格式验证
+        import re
+        color_pattern = re.compile(r'^#[0-9a-fA-F]{6}$')
+        
+        primary_color = config.get('theme', {}).get('primary_color', '#e74c3c')
+        if not color_pattern.match(primary_color):
+            errors.append(f"primary_color 格式错误: {primary_color}")
         
         return errors
     
-    def safe_fetch_issues(self) -> List[Dict[str, Any]]:
-        """安全的GitHub API调用，获取issues"""
-        try:
-            return self.fetch_issues()
-        except Exception as e:
-            print(f"GitHub API错误: {e}")
-            # 使用本地缓存
-            return self.load_cached_issues()
-    
-    def fetch_issues(self) -> List[Dict[str, Any]]:
-        """从GitHub获取issues"""
-        github_token = os.environ.get('GITHUB_TOKEN')
-        repo = os.environ.get('GITHUB_REPOSITORY')
+    def fetch_github_issues(self) -> List[Dict]:
+        """获取GitHub Issues"""
+        if not self.github_repo:
+            print("警告: 未设置GITHUB_REPOSITORY，使用模拟数据")
+            return self.get_mock_issues()
+            
+        print(f"正在获取GitHub仓库 {self.github_repo} 的Issues...")
         
-        if not repo:
-            # 从当前git仓库获取
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ['git', 'remote', 'get-url', 'origin'],
-                    capture_output=True, text=True
-                )
-                if result.returncode == 0:
-                    remote_url = result.stdout.strip()
-                    # 解析仓库名
-                    if 'github.com' in remote_url:
-                        repo = remote_url.replace('https://github.com/', '').replace('.git', '').strip()
-            except:
-                pass
+        url = f"https://api.github.com/repos/{self.github_repo}/issues"
+        headers = {}
+        if self.github_token:
+            headers["Authorization"] = f"token {self.github_token}"
         
-        if not repo:
-            print("错误: 无法确定GitHub仓库")
-            sys.exit(1)
-        
-        headers = {
-            'Accept': 'application/vnd.github.v3+json'
+        params = {
+            "state": "open",
+            "per_page": 100
         }
-        if github_token:
-            headers['Authorization'] = f'token {github_token}'
         
-        all_issues = []
-        page = 1
-        per_page = 100
-        
-        while True:
-            url = f'https://api.github.com/repos/{repo}/issues'
-            params = {
-                'state': 'open',
-                'page': page,
-                'per_page': per_page
-            }
-            
-            print(f"获取第 {page} 页issues...")
+        try:
             response = requests.get(url, headers=headers, params=params)
-            
-            if response.status_code != 200:
-                print(f"GitHub API错误: {response.status_code}")
-                print(response.text[:200])
-                break
-            
+            response.raise_for_status()
             issues = response.json()
-            if not issues:
-                break
-            
-            all_issues.extend(issues)
-            
-            if len(issues) < per_page:
-                break
-            
-            page += 1
-            time.sleep(0.5)  # 避免频率限制
-        
-        return all_issues
+            print(f"成功获取 {len(issues)} 个Issue")
+            return issues
+        except Exception as e:
+            print(f"获取GitHub Issues失败: {e}")
+            print("使用模拟数据")
+            return self.get_mock_issues()
     
-    def load_cached_issues(self) -> List[Dict[str, Any]]:
-        """从本地缓存加载issues"""
-        cache_file = Path("O-MD/articles.json")
-        if cache_file.exists():
-            try:
-                with open(cache_file, 'r', encoding='utf-8') as f:
-                    cached_data = json.load(f)
-                return cached_data.get('issues', [])
-            except:
-                pass
-        return []
+    def get_mock_issues(self) -> List[Dict]:
+        """获取模拟数据，用于测试"""
+        return [
+            {
+                "number": 1,
+                "title": "欢迎使用VaLog博客系统",
+                "body": """!vml-<span>这是一个基于GitHub Issues的静态博客系统，自动生成响应式博客网站</span>
+                
+## 功能特性
+- 基于GitHub Issues管理文章
+- 自动生成静态网站
+- 响应式设计
+- 搜索功能
+- 主题切换
+                
+## 使用说明
+1. 创建GitHub Issues作为博客文章
+2. 系统自动生成静态网站
+3. 部署到GitHub Pages""",
+                "created_at": "2023-10-01T10:00:00Z",
+                "labels": [{"name": "教程"}, {"name": "介绍"}],
+                "state": "open"
+            },
+            {
+                "number": 2,
+                "title": "如何编写博客文章",
+                "body": """!vml-<span>学习如何使用Markdown和特殊语法编写VaLog博客文章</span>
+                
+## Markdown语法
+支持标准的Markdown语法：
+- 标题
+- 列表
+- 代码块
+- 链接
+- 图片
+                
+## 特殊语法
+使用 !vml- 开头可以内联HTML
+                
+示例:
+!vml-<span style="color: red;">这是红色文本</span>""",
+                "created_at": "2023-10-02T14:30:00Z",
+                "labels": [{"name": "教程"}, {"name": "markdown"}],
+                "state": "open"
+            }
+        ]
     
     def process_html_inline(self, content: str) -> str:
         """处理!vml-开头的HTML内联语法"""
         pattern = r'!vml-(.+?)(?=\n|$)'
-        
         def replace_html(match):
             return match.group(1)  # 直接输出HTML，不转义
-        
-        return re.sub(pattern, replace_html, content, flags=re.DOTALL)
+        return re.sub(pattern, replace_html, content)
     
-    def extract_summary(self, content: str) -> Optional[str]:
-    """从内容中提取摘要，优先提取第一个!vml-<span>标签内容"""
-    # 查找第一个!vml-<span>标签
-    vml_pattern = r'!vml-<span[^>]*>(.+?)</span>'
-    vml_match = re.search(vml_pattern, content)
+    def extract_summary(self, content: str) -> str:
+        """提取摘要（新逻辑）"""
+        # 查找第一个!vml-开头的行
+        vml_pattern = r'!vml-(.+)'
+        match = re.search(vml_pattern, content)
+        if not match:
+            return ""  # 没有找到，摘要为空
+        
+        vml_line = match.group(1)
+        # 提取<span>标签内容
+        span_pattern = r'<span[^>]*>(.*?)</span>'
+        span_match = re.search(span_pattern, vml_line)
+        if span_match:
+            return span_match.group(1).strip()
+        return ""
     
-    if vml_match:
-        # 提取span内容作为摘要
-        return vml_match.group(1).strip()
-    
-    # 如果没有找到匹配的span标签，返回None
-    return None
-
-def process_article(self, issue: Dict[str, Any], is_special: bool = False) -> Optional[Dict[str, Any]]:
-    """处理单个issue为文章数据"""
-    try:
-        issue_number = issue['number']
-        title = issue['title']
-        created_at = issue['created_at']
-        labels = [label['name'] for label in issue.get('labels', [])]
-        body = issue['body'] or ''
-        
-        # 去除pinned、top、special标签
-        labels = [label for label in labels if label not in ['pinned', 'top', 'special']]
-        
-        # 解析日期
-        date_obj = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-        date_str = date_obj.strftime('%Y-%m-%d')
-        
+    def process_issue_content(self, content: str) -> Tuple[str, str]:
+        """处理Issue内容，返回处理后的内容和摘要"""
         # 提取摘要
-        summary = self.extract_summary(body)
+        summary = self.extract_summary(content)
         
-        # 处理内容
-        processed_body = self.process_html_inline(body)
-        html_content = markdown.markdown(processed_body)
+        # 处理HTML内联语法
+        processed_content = self.process_html_inline(content)
         
-        # 生成文章数据
-        article_data = {
-            'id': f"{'special-' if is_special else 'article-'}{issue_number}",
-            'title': title,
-            'summary': summary,  # 可能为None
-            'tags': labels,
-            'date': date_str,
-            'content': html_content,
-            'url': f"/article/{issue_number}.html" if not is_special else f"https://github.com/issues/{issue_number}",
-            'has_summary': summary is not None  # 添加摘要存在标志
-        }
+        # 移除!vml-摘要行
+        processed_content = re.sub(r'!vml-<span[^>]*>.*?</span>\s*\n?', '', processed_content, count=1)
         
-        # 保存原始Markdown
-        self.save_original_markdown(issue_number, body)
-        
-        return article_data
-        
-    except Exception as e:
-        print(f"处理文章 {issue.get('number', 'unknown')} 时出错: {e}")
-        return None
-    
-        return summary
-    
-    def generate_vertical_title(self, title: str, tags: List[str]) -> str:
-        """生成垂直标题"""
-        if not title or len(title) < 2:
-            if tags:
-                return tags[0][:4] if len(tags[0]) > 4 else tags[0]
-            return "Blog"
-        
-        # 提取前4个字符
-        vertical = title[:4]
-        return vertical
-    
-    def generate_gradient(self, index: int) -> List[str]:
-        """生成渐变颜色"""
-        gradients = [
-            ["#e74c3c", "#c0392b"],  # 红色
-            ["#3498db", "#2980b9"],  # 蓝色
-            ["#2ecc71", "#27ae60"],  # 绿色
-            ["#9b59b6", "#8e44ad"],  # 紫色
-            ["#1abc9c", "#16a085"],  # 青色
-        ]
-        
-        return gradients[index % len(gradistics)]
+        return processed_content, summary
     
     def process_issues(self):
-        """处理issues为文章数据"""
-        issues = self.safe_fetch_issues()
-        self.issues = issues
+        """处理Issues为文章数据"""
+        self.issues = self.fetch_github_issues()
         
-        # 分类issues
-        github_pinned = []
-        tag_pinned = []
-        specials = []
-        normal_articles = []
-        
-        for issue in issues:
-            issue_number = issue['number']
-            title = issue['title']
-            created_at = issue['created_at']
-            labels = [label['name'] for label in issue.get('labels', [])]
-            body = issue['body'] or ''
+        for issue in self.issues:
+            # 跳过pull request
+            if "pull_request" in issue:
+                continue
             
-            # 检查是否为GitHub置顶
-            if 'pinned' in labels:
-                github_pinned.append(issue)
-            # 检查是否为标签置顶
-            elif 'top' in labels:
-                tag_pinned.append(issue)
-            # 检查是否为special
-            elif 'special' in labels:
-                specials.append(issue)
-            else:
-                normal_articles.append(issue)
-        
-        # 处理置顶逻辑
-        if self.config.get('special', {}).get('top', False):
-            # 所有置顶文章放入Special
-            all_pinned = github_pinned + tag_pinned
-            for issue in all_pinned:
-                specials.append(issue)
-        else:
-            # 最多1个GitHub置顶文章
-            if len(github_pinned) > 1:
-                print("警告: 检测到多个GitHub置顶文章，但配置只允许1个")
-                github_pinned = github_pinned[:1]
-            
-            # 将GitHub置顶文章放到普通列表顶部
-            if github_pinned:
-                normal_articles = github_pinned + normal_articles
-        
-        # 处理普通文章
-        for issue in normal_articles:
-            article = self.process_article(issue, is_special=False)
-            if article:
-                self.articles.append(article)
-        
-        # 处理特殊文章
-        for issue in specials:
-            article = self.process_article(issue, is_special=True)
-            if article:
-                self.specials.append(article)
-        
-        # 保存文章数据到缓存
-        self.save_articles_cache()
-    
-    def process_article(self, issue: Dict[str, Any], is_special: bool = False) -> Optional[Dict[str, Any]]:
-        """处理单个issue为文章数据"""
-        try:
-            issue_number = issue['number']
-            title = issue['title']
-            created_at = issue['created_at']
-            labels = [label['name'] for label in issue.get('labels', [])]
-            body = issue['body'] or ''
-            
-            # 去除pinned、top、special标签
-            labels = [label for label in labels if label not in ['pinned', 'top', 'special']]
-            
-            # 解析日期
-            date_obj = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-            date_str = date_obj.strftime('%Y-%m-%d')
-            
-            # 生成摘要
-            summary = self.extract_summary(body)
+            issue_id = issue["number"]
+            title = issue["title"]
+            created_at = issue["created_at"][:10]  # 只取日期部分
+            labels = [label["name"] for label in issue.get("labels", [])]
             
             # 处理内容
-            processed_body = self.process_html_inline(body)
-            html_content = markdown.markdown(processed_body)
+            raw_content = issue.get("body", "")
+            content, summary = self.process_issue_content(raw_content)
             
-            # 分割为段落
-            paragraphs = re.split(r'</p>\s*<p>|</p>\s*<p[^>]*>', html_content)
-            paragraphs = [p.strip() for p in paragraphs if p.strip()]
+            # Markdown转HTML
+            html_content = markdown.markdown(content, extensions=['extra', 'codehilite'])
             
-            # 如果没有段落，使用整个内容
-            if not paragraphs:
-                paragraphs = [html_content]
-            
-            # 生成垂直标题
-            vertical_title = self.generate_vertical_title(title, labels)
-            
-            # 生成文章ID
-            article_id = f"article-{issue_number}"
-            
-            # 生成URL
-            url = f"/article/{issue_number}.html"
-            
-            # 生成渐变颜色
-            gradient = self.generate_gradient(len(self.articles))
-            
-            article_data = {
-                'id': article_id,
-                'title': title,
-                'tags': labels,
-                'verticalTitle': vertical_title,
-                'date': date_str,
-                'content': paragraphs,
-                'url': url,
-                'gradient': gradient
+            # 生成文章数据
+            article = {
+                "id": f"article-{issue_id}",
+                "issue_id": issue_id,
+                "title": title,
+                "tags": labels,
+                "verticalTitle": labels[0] if labels else "文章",
+                "date": created_at,
+                "summary": summary,
+                "content": html_content,
+                "raw_content": content,
+                "url": f"/article/{issue_id}.html",
+                "gradient": ["#e74c3c", "#c0392b"]  # 默认渐变颜色
             }
             
-            # 如果是special文章，调整结构
-            if is_special:
-                article_data['id'] = f"special-{issue_number}"
-                article_data['url'] = f"https://github.com/issues/{issue_number}"
+            self.articles.append(article)
             
             # 保存原始Markdown
-            self.save_original_markdown(issue_number, body)
-            
-            return article_data
-            
-        except Exception as e:
-            print(f"处理文章 {issue.get('number', 'unknown')} 时出错: {e}")
-            return None
-    
-    def save_original_markdown(self, issue_number: int, content: str):
-        """保存原始Markdown到缓存"""
-        md_file = Path(f"O-MD/{issue_number}.md")
-        with open(md_file, 'w', encoding='utf-8') as f:
-            f.write(content)
-    
-    def save_articles_cache(self):
-        """保存文章数据到缓存"""
-        cache_data = {
-            'issues': self.issues,
-            'articles': self.articles,
-            'specials': self.specials,
-            'timestamp': datetime.now().isoformat()
-        }
+            self.save_raw_markdown(issue_id, content)
         
-        cache_file = Path("O-MD/articles.json")
-        with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        print(f"成功处理 {len(self.articles)} 篇文章")
+    
+    def save_raw_markdown(self, issue_id: int, content: str):
+        """保存原始Markdown到O-MD目录"""
+        os.makedirs("O-MD", exist_ok=True)
+        filepath = f"O-MD/{issue_id}.md"
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
     
     def generate_base_yaml(self):
         """生成base.yaml文件"""
-        # 准备基础数据
-        base_data = {
-            'blog': {
-                'avatar': self.config['blog'].get('avatar', 'static/avatar.png'),
-                'name': self.config['blog']['name'],
-                'description': self.config['blog']['description']
-            },
-            'articles': self.articles,
-            'specials': self.specials,
-            'menu_items': []
+        # 准备博客基础信息
+        blog_info = {
+            "avatar": self.config["blog"]["avatar"],
+            "name": self.config["blog"]["name"],
+            "description": self.config["blog"]["description"],
+            "favicon": self.config["blog"]["favicon"]
         }
         
-        # 处理浮动菜单
-        floating_menu_config = self.config.get('floating_menu', [])
-        for menu_item in floating_menu_config:
-            tag = menu_item.get('tag')
-            display = menu_item.get('display')
+        # 准备文章数据
+        articles_data = []
+        for article in self.articles:
+            # 将HTML内容分割为段落
+            paragraphs = []
+            if article["raw_content"]:
+                # 简单按空行分割
+                raw_paragraphs = article["raw_content"].split('\n\n')
+                paragraphs = [p.strip() for p in raw_paragraphs if p.strip()]
+                if len(paragraphs) > 3:  # 只取前3段作为预览
+                    paragraphs = paragraphs[:3]
             
-            # 查找对应标签的文章
-            url = None
+            article_data = {
+                "id": article["id"],
+                "title": article["title"],
+                "tags": article["tags"],
+                "verticalTitle": article["verticalTitle"],
+                "date": article["date"],
+                "content": paragraphs,
+                "url": article["url"],
+                "gradient": article["gradient"]
+            }
+            articles_data.append(article_data)
+        
+        # 准备Special卡片数据
+        specials_data = []
+        special_config = self.config.get("special", {})
+        
+        # 检查是否有置顶文章
+        if special_config.get("top", False):
+            # 所有置顶文章放入Special
             for article in self.articles:
-                if tag in article.get('tags', []):
-                    url = article['url']
-                    break
+                if "top" in article["tags"] or "special" in article["tags"]:
+                    special_data = {
+                        "id": f"special-{article['issue_id']}",
+                        "title": article["title"],
+                        "tags": article["tags"],
+                        "content": [article["summary"]] if article["summary"] else ["暂无简介"],
+                        "url": article["url"],
+                        "gradient": article["gradient"]
+                    }
+                    specials_data.append(special_data)
+        else:
+            # 只有special标签的文章放入Special
+            for article in self.articles:
+                if "special" in article["tags"]:
+                    special_data = {
+                        "id": f"special-{article['issue_id']}",
+                        "title": article["title"],
+                        "tags": article["tags"],
+                        "content": [article["summary"]] if article["summary"] else ["暂无简介"],
+                        "url": article["url"],
+                        "gradient": article["gradient"]
+                    }
+                    specials_data.append(special_data)
+        
+        # 如果没有Special文章，添加仅文本模式
+        if not specials_data and "view" in special_config:
+            view_content = []
+            for key, value in special_config["view"].items():
+                if key == "Total_time":
+                    # 计算运行天数
+                    try:
+                        start_date = datetime.strptime(value, "%Y.%m.%d")
+                        days = (datetime.now() - start_date).days
+                        view_content.append(f"已运行 {days} 天")
+                    except:
+                        view_content.append(value)
+                elif key == "RF_Link":
+                    view_content.append(f'<a href="{value}" target="_blank">{special_config["view"]["RF_Information"]}</a>')
+                elif key == "C_Link":
+                    view_content.append(f'<a href="{value}" target="_blank">{special_config["view"]["Copyright"]}</a>')
+                elif key not in ["RF_Information", "Copyright"]:
+                    view_content.append(value)
             
-            base_data['menu_items'].append({
-                'tag': tag,
-                'display': display,
-                'url': url
+            specials_data.append({
+                "id": "special-text-only",
+                "content": view_content
             })
         
-        # 写入base.yaml
-        with open('base.yaml', 'w', encoding='utf-8') as f:
-            yaml.dump(base_data, f, allow_unicode=True, default_flow_style=False)
+        # 准备浮动菜单数据
+        menu_items_data = []
+        floating_menu = self.config.get("floating_menu", [])
         
-        self.base_data = base_data
+        for menu_item in floating_menu:
+            tag = menu_item.get("tag", "")
+            display = menu_item.get("display", tag)
+            
+            # 查找是否有对应标签的文章
+            url = None
+            for article in self.articles:
+                if tag in article["tags"]:
+                    url = article["url"]
+                    break
+            
+            menu_items_data.append({
+                "tag": tag,
+                "display": display,
+                "url": url
+            })
+        
+        # 构建完整数据
+        self.base_data = {
+            "blog": blog_info,
+            "articles": articles_data,
+            "specials": specials_data,
+            "menu_items": menu_items_data
+        }
+        
+        # 保存到文件
+        os.makedirs(os.path.dirname("base.yaml"), exist_ok=True)
+        with open("base.yaml", 'w', encoding='utf-8') as f:
+            yaml.dump(self.base_data, f, allow_unicode=True, default_flow_style=False)
+        
         print("base.yaml 生成完成")
     
     def generate_home_page(self):
-        """生成主页"""
-        template_file = Path("template/home.html")
-        if not template_file.exists():
-            print(f"错误: 主页模板文件不存在: {template_file}")
+        """生成主页（使用占位符替换）"""
+        if not os.path.exists("template/home.html"):
+            print("错误: template/home.html 不存在")
             return
         
-        with open(template_file, 'r', encoding='utf-8') as f:
-            template_content = f.read()
+        with open("template/home.html", "r", encoding="utf-8") as f:
+            template = f.read()
         
-        # 转义特殊字符
-        def escape_for_js(value):
-            if isinstance(value, str):
-                return html.escape(value)
-            elif isinstance(value, list):
-                return [escape_for_js(item) for item in value]
-            elif isinstance(value, dict):
-                return {k: escape_for_js(v) for k, v in value.items()}
-            else:
-                return value
+        # 替换基础信息占位符
+        template = template.replace("<title>VaLog</title>", 
+                                   f"<title>{self.config['blog']['name']}</title>")
+        template = template.replace('href="favicon.ico"', 
+                                   f'href="{self.config["blog"]["favicon"]}"')
+        template = template.replace('src="Url"', 
+                                   f'src="{self.config["blog"]["avatar"]}"')
+        template = template.replace('<div class="mobile-title">VaLog</div>', 
+                                   f'<div class="mobile-title">{self.config["blog"]["name"]}</div>')
         
-        # 准备模板数据
-        template_data = {
-            'blog': self.base_data['blog'],
-            'theme': self.config.get('theme', {}),
-            'menu_items': self.base_data['menu_items'],
-            'articles': [escape_for_js(article) for article in self.articles],
-            'specials': [escape_for_js(special) for special in self.specials]
-        }
+        # 替换JavaScript数据
+        articles_json = json.dumps(self.base_data['articles'], ensure_ascii=False, indent=2)
+        specials_json = json.dumps(self.base_data['specials'], ensure_ascii=False, indent=2)
+        menu_items_json = json.dumps(self.base_data['menu_items'], ensure_ascii=False, indent=2)
         
-        # 渲染模板
-        from jinja2 import Template
+        # 查找并替换JavaScript数据部分
+        js_start = "// ==================== 数据与状态管理 ===================="
+        template_parts = template.split(js_start, 1)
+        if len(template_parts) == 2:
+            new_js_section = f"""// ==================== 数据与状态管理 ====================
+const blogData = {{
+  articles: {articles_json},
+  specials: {specials_json}
+}};
+
+const menuItems = {menu_items_json};"""
+            template = template_parts[0] + new_js_section + template_parts[1]
         
-        template = Template(template_content)
-        rendered_content = template.render(**template_data)
+        # 写入输出文件
+        os.makedirs("docs", exist_ok=True)
+        with open("docs/index.html", "w", encoding="utf-8") as f:
+            f.write(template)
         
-        # 写入生成的文件
-        output_file = Path("docs/index.html")
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(rendered_content)
-        
-        print(f"主页生成完成: {output_file}")
+        print("主页生成完成: docs/index.html")
     
     def generate_article_pages(self):
-        """生成文章页"""
-        template_file = Path("template/article.html")
-        if not template_file.exists():
-            print(f"错误: 文章页模板文件不存在: {template_file}")
+        """生成文章页（使用Jinja2）"""
+        if not os.path.exists("template/article.html"):
+            print("错误: template/article.html 不存在")
             return
         
-        with open(template_file, 'r', encoding='utf-8') as f:
-            template_content = f.read()
+        try:
+            from jinja2 import Environment, FileSystemLoader
+        except ImportError:
+            print("警告: 未安装Jinja2，使用简单模板替换")
+            return self.generate_article_pages_simple()
         
-        from jinja2 import Template
-        template = Template(template_content)
+        env = Environment(loader=FileSystemLoader('template'))
+        template = env.get_template('article.html')
         
-        # 为每篇文章生成页面
         for article in self.articles:
             # 准备文章数据
             article_data = {
-                'article': article,
-                'blog': {
-                    'name': self.config['blog']['name'],
-                    'description': self.config['blog']['description']
-                },
-                'theme': self.config.get('theme', {})
+                'blog': self.config['blog'],
+                'article': article
             }
             
             # 渲染模板
-            rendered_content = template.render(**article_data)
+            html = template.render(**article_data)
             
             # 写入文件
-            output_file = Path(f"docs/article/{article['id'].replace('article-', '')}.html")
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(rendered_content)
+            output_path = f"docs/article/{article['issue_id']}.html"
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(html)
+        
+        print(f"文章页生成完成: {len(self.articles)} 个文件")
+                
+    def generate_article_pages_simple(self):
+        """备用：简单的文章页生成"""
+        with open("template/article.html", "r", encoding="utf-8") as f:
+            template = f.read()
+        
+        for article in self.articles:
+            # 简单替换占位符
+            html = template
             
-            print(f"文章页生成完成: {output_file}")
-    
-    def calculate_run_days(self) -> int:
-        """计算运行天数"""
-        total_time = self.config.get('special', {}).get('view', {}).get('Total_time', '2023.01.01')
-        try:
-            start_date = datetime.strptime(total_time, '%Y.%m.%d')
-            current_date = datetime.now()
-            delta = current_date - start_date
-            return delta.days
-        except:
-            return 0
+            # 替换标题
+            html = html.replace("Title", article['title'])
+            html = html.replace("<title>Article</title>", 
+                              f"<title>{article['title']} - {self.config['blog']['name']}</title>")
+            
+            # 替换摘要
+            if article['summary']:
+                html = html.replace("summary", article['summary'])
+            else:
+                # 移除摘要部分
+                html = re.sub(r'<p class="summary">\s*summary\s*</p>', '', html)
+            
+            # 替换日期
+            html = html.replace("Date", article['date'])
+            
+            # 替换标签
+            if article['tags']:
+                tags_html = ''.join([f'<span class="tag">{tag}</span>' for tag in article['tags']])
+                html = html.replace('<span class="tag">JavaScript</span>', tags_html)
+            else:
+                html = html.replace('<div class="tags">\n         <span class="tag">JavaScript</span>\n      </div>', 
+                                  '<div class="tags"></div>')
+            
+            # 替换内容
+            html = html.replace('<div class="content">\n\n   </div>', 
+                              f'<div class="content">\n      {article["content"]}\n   </div>')
+            
+            # 写入文件
+            output_path = f"docs/article/{article['issue_id']}.html"
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(html)
     
     def run(self):
         """主运行流程"""
-        print("开始生成VaLog博客...")
+        print("=" * 50)
+        print("VaLog 博客生成器启动")
+        print("=" * 50)
         
-        # 1. 获取和处理issues
-        print("正在获取GitHub Issues...")
+        # 1. 处理Issues
         self.process_issues()
         
         # 2. 生成base.yaml
-        print("正在生成base.yaml...")
         self.generate_base_yaml()
         
         # 3. 生成主页
-        print("正在生成主页...")
         self.generate_home_page()
         
         # 4. 生成文章页
-        print("正在生成文章页...")
         self.generate_article_pages()
         
-        print("VaLog博客生成完成！")
-        print(f"生成文章总数: {len(self.articles)}")
-        print(f"生成特殊卡片数: {len(self.specials)}")
+        # 5. 复制静态资源
+        self.copy_static_resources()
+        
+        print("=" * 50)
+        print("VaLog 博客生成完成")
+        print("=" * 50)
+    
+    def copy_static_resources(self):
+        """复制静态资源到docs目录"""
+        static_src = "static"
+        static_dst = "docs/static"
+        
+        if os.path.exists(static_src):
+            import shutil
+            if os.path.exists(static_dst):
+                shutil.rmtree(static_dst)
+            shutil.copytree(static_src, static_dst)
+            print(f"静态资源复制完成: {static_src} -> {static_dst}")
+        else:
+            print(f"警告: 静态资源目录 {static_src} 不存在")
+            # 创建必要的目录结构
+            os.makedirs(static_dst, exist_ok=True)
+            
+            # 创建默认头像
+            from PIL import Image, ImageDraw
+            try:
+                img = Image.new('RGB', (200, 200), color='#e74c3c')
+                d = ImageDraw.Draw(img)
+                d.text((100, 100), "V", fill='white', anchor='mm')
+                img.save(f"{static_dst}/avatar.png")
+                print("创建默认头像: docs/static/avatar.png")
+            except:
+                pass
 
+def main():
+    """主函数"""
+    generator = VaLogGenerator("config.yml")
+    generator.run()
 
 if __name__ == "__main__":
-    generator = VaLogGenerator()
-    generator.run()
+    main()
