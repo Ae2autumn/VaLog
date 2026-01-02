@@ -372,16 +372,38 @@ class VaLogGenerator:
             template = f.read()
         
         # 替换基础信息占位符
-        template = template.replace("<title>VaLog</title>", 
-                                   f"<title>{self.config['blog']['name']}</title>")
-        template = template.replace('href="favicon.ico"', 
-                                   f'href="{self.config["blog"]["favicon"]}"')
-        template = template.replace('src="Url"', 
-                                   f'src="{self.config["blog"]["avatar"]}"')
-        template = template.replace('<div class="mobile-title">VaLog</div>', 
-                                   f'<div class="mobile-title">{self.config["blog"]["name"]}</div>')
+        blog_name = self.config['blog']['name']
+        blog_description = self.config['blog']['description']
+        avatar_url = self.config['blog']['avatar']
+        favicon_url = self.config['blog']['favicon']
         
-        # 替换JavaScript数据
+        # 替换文档标题
+        template = template.replace("<title>VaLog</title>", 
+                                   f"<title>{blog_name}</title>")
+        
+        # 替换meta描述
+        template = template.replace('content="VaLog"', 
+                                   f'content="{blog_name}"')
+        
+        # 替换favicon
+        template = template.replace('href="favicon.ico"', 
+                                   f'href="{favicon_url}"')
+        
+        # 替换头像URL
+        template = template.replace('src="Url"', 
+                                   f'src="{avatar_url}"')
+        
+        # 替换移动端标题
+        template = template.replace('<div class="mobile-title">VaLog</div>', 
+                                   f'<div class="mobile-title">{blog_name}</div>')
+        
+        # 替换顶部卡片内容
+        template = template.replace('<h2>Welcome</h2>', 
+                                   f'<h2>{blog_name}</h2>')
+        template = template.replace('<p>Introduction</p>', 
+                                   f'<p>{blog_description}</p>')
+        
+        # 替换JavaScript数据部分
         articles_json = json.dumps(self.base_data['articles'], ensure_ascii=False, indent=2)
         specials_json = json.dumps(self.base_data['specials'], ensure_ascii=False, indent=2)
         menu_items_json = json.dumps(self.base_data['menu_items'], ensure_ascii=False, indent=2)
@@ -398,6 +420,8 @@ const blogData = {{
 
 const menuItems = {menu_items_json};"""
             template = template_parts[0] + new_js_section + template_parts[1]
+        else:
+            print("警告: 未找到JavaScript数据注入点，将使用默认数据")
         
         # 写入输出文件
         os.makedirs("docs", exist_ok=True)
@@ -441,39 +465,65 @@ const menuItems = {menu_items_json};"""
                 
     def generate_article_pages_simple(self):
         """备用：简单的文章页生成"""
+        if not os.path.exists("template/article.html"):
+            print("错误: template/article.html 不存在")
+            return
+        
         with open("template/article.html", "r", encoding="utf-8") as f:
-            template = f.read()
+            template_content = f.read()
+        
+        # 读取base.yaml数据以获取博客信息
+        if os.path.exists("base.yaml"):
+            with open("base.yaml", "r", encoding="utf-8") as f:
+                base_data = yaml.safe_load(f)
+                blog_info = base_data.get("blog", {})
+        else:
+            blog_info = {
+                "name": self.config["blog"]["name"],
+                "favicon": self.config["blog"]["favicon"]
+            }
         
         for article in self.articles:
-            # 简单替换占位符
-            html = template
+            html = template_content
             
-            # 替换标题
-            html = html.replace("Title", article['title'])
+            # 替换文档标题
+            html = html.replace("{{ article.title }} - {{ blog.name }}", 
+                              f"{article['title']} - {blog_info.get('name', 'VaLog')}")
             html = html.replace("<title>Article</title>", 
-                              f"<title>{article['title']} - {self.config['blog']['name']}</title>")
+                              f"<title>{article['title']} - {blog_info.get('name', 'VaLog')}</title>")
             
-            # 替换摘要
+            # 替换favicon
+            html = html.replace('href="{{ blog.favicon }}"', 
+                              f'href="{blog_info.get("favicon", "favicon.ico")}"')
+            
+            # 替换博客名称
+            html = html.replace("{{ blog.name }}", blog_info.get("name", "VaLog"))
+            
+            # 替换文章标题
+            html = html.replace("{{ article.title }}", article['title'])
+            
+            # 替换文章摘要
             if article['summary']:
-                html = html.replace("summary", article['summary'])
+                html = html.replace("{{ article.summary }}", article['summary'])
             else:
                 # 移除摘要部分
-                html = re.sub(r'<p class="summary">\s*summary\s*</p>', '', html)
+                html = re.sub(r'<p class="summary">\s*{{ article\.summary }}\s*</p>', '', html)
             
-            # 替换日期
-            html = html.replace("Date", article['date'])
+            # 替换文章日期
+            html = html.replace("{{ article.date }}", article['date'])
             
-            # 替换标签
+            # 替换文章标签
             if article['tags']:
                 tags_html = ''.join([f'<span class="tag">{tag}</span>' for tag in article['tags']])
-                html = html.replace('<span class="tag">JavaScript</span>', tags_html)
+                html = html.replace('{% for tag in article.tags %}<span class="tag">{{ tag }}</span>{% endfor %}', 
+                                  tags_html)
             else:
-                html = html.replace('<div class="tags">\n         <span class="tag">JavaScript</span>\n      </div>', 
-                                  '<div class="tags"></div>')
+                # 移除标签部分
+                html = re.sub(r'<div class="tags">\s*{% for tag in article.tags %}<span class="tag">{{ tag }}</span>{% endfor %}\s*</div>', 
+                            '<div class="tags"></div>', html)
             
-            # 替换内容
-            html = html.replace('<div class="content">\n\n   </div>', 
-                              f'<div class="content">\n      {article["content"]}\n   </div>')
+            # 替换文章内容
+            html = html.replace("{{ article.content|safe }}", article['content'])
             
             # 写入文件
             output_path = f"docs/article/{article['issue_id']}.html"
@@ -523,15 +573,32 @@ const menuItems = {menu_items_json};"""
             os.makedirs(static_dst, exist_ok=True)
             
             # 创建默认头像
-            from PIL import Image, ImageDraw
             try:
+                from PIL import Image, ImageDraw, ImageFont
                 img = Image.new('RGB', (200, 200), color='#e74c3c')
                 d = ImageDraw.Draw(img)
-                d.text((100, 100), "V", fill='white', anchor='mm')
+                
+                # 尝试加载字体，如果失败则使用默认
+                try:
+                    font = ImageFont.truetype("arial.ttf", 80)
+                except:
+                    font = ImageFont.load_default()
+                
+                d.text((100, 100), "V", fill='white', font=font, anchor='mm')
                 img.save(f"{static_dst}/avatar.png")
                 print("创建默认头像: docs/static/avatar.png")
-            except:
-                pass
+            except ImportError:
+                print("警告: PIL未安装，无法创建默认头像")
+            except Exception as e:
+                print(f"警告: 创建默认头像失败: {e}")
+        
+        # 复制favicon
+        favicon_src = self.config['blog']['favicon']
+        if favicon_src and os.path.exists(favicon_src):
+            import shutil
+            favicon_dst = os.path.join("docs", os.path.basename(favicon_src))
+            shutil.copy2(favicon_src, favicon_dst)
+            print(f"favicon复制完成: {favicon_src} -> {favicon_dst}")
 
 def main():
     """主函数"""
