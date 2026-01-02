@@ -1,23 +1,14 @@
-name: VaLog Blog Generator
+name: Deploy VaLog Blog
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   issues:
     types: [opened, edited, reopened]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -31,44 +22,38 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install PyYAML markdown requests Jinja2 Pillow
+        pip install PyYAML markdown requests Jinja2
     
     - name: Generate Blog
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo "开始生成 VaLog 博客..."
-        python VaLog.py
+        echo "🚀 开始生成 VaLog 博客..."
+        python VaLog.py --deploy prepare
         
-        # 创建必要的 GitHub Pages 文件
-        echo "创建 .nojekyll 文件..."
-        touch docs/.nojekyll
+        # 检查是否生成了必要文件
+        if [ ! -f "docs/index.html" ]; then
+          echo "❌ 错误: 未生成 index.html"
+          exit 1
+        fi
         
-        # 如果需要自定义域名，创建 CNAME 文件
-        # echo "yourdomain.com" > docs/CNAME
+        echo "✅ 博客生成成功！"
+        echo "📁 生成的文件:"
+        find docs -type f | sort
     
     - name: Setup Pages
       uses: actions/configure-pages@v4
     
-    - name: Upload artifact
+    - name: Upload to Pages
       uses: actions/upload-pages-artifact@v3
       with:
-        path: './docs'
+        path: ./docs
     
-    - name: Show generated files
-      run: |
-        echo "生成的目录结构:"
-        find docs -type f | sort
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
+    
+    - name: Show Blog URL
+      run: |
+        echo "🎉 博客部署完成！"
+        echo "🌐 访问地址: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
