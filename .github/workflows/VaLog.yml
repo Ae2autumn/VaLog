@@ -7,17 +7,16 @@ on:
     types: [opened, edited, reopened]
   workflow_dispatch:
 
-# 关键：必须设置这些权限
+# 权限配置（关键）
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
-    # 部署环境
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -25,71 +24,58 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
     
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-        cache: 'pip'
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
         pip install PyYAML markdown requests Jinja2
     
-    - name: Generate VaLog Blog
+    - name: Generate and Prepare Blog
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo "🎯 生成 VaLog 博客..."
+        echo "🚀 开始生成并准备 VaLog 博客部署..."
+        python VaLog.py --mode auto
         
-        # 显示环境信息
-        echo "工作目录: $(pwd)"
-        echo "仓库: ${{ github.repository }}"
-        echo "事件: ${{ github.event_name }}"
+        # 验证生成的文件
+        echo "📁 验证生成的文件..."
+        if [ ! -f "docs/index.html" ]; then
+          echo "❌ 错误: 未生成 index.html"
+          exit 1
+        fi
         
-        # 检查文件和目录
-        echo "📁 当前目录结构:"
-        ls -la
+        if [ ! -f "docs/.nojekyll" ]; then
+          echo "❌ 错误: 未生成 .nojekyll"
+          exit 1
+        fi
         
-        # 生成博客
-        python VaLog.py
-        
-        echo "✅ 博客生成完成"
-        
-        # 确保创建了必要的部署文件
-        touch docs/.nojekyll
-        
-        # 显示生成的文件
-        echo "📄 生成的文件:"
-        find docs -type f | head -20
+        echo "✅ 博客文件验证通过"
     
     - name: Setup Pages
       uses: actions/configure-pages@v4
     
-    - name: Upload artifact
+    - name: Upload to Pages
       uses: actions/upload-pages-artifact@v3
       with:
-        path: 'docs'
+        path: ./docs
     
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
     
-    - name: Success Message
+    - name: Show Success Message
       run: |
-        echo "=========================================="
-        echo "✅ VaLog 博客部署成功！"
-        echo "=========================================="
+        echo "========================================"
+        echo "🎉 VaLog 博客部署成功！"
+        echo "========================================"
         echo ""
         echo "🌐 访问地址:"
         echo "  https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
         echo ""
-        echo "🔧 GitHub Pages 设置:"
-        echo "  https://github.com/${{ github.repository }}/settings/pages"
-        echo ""
-        echo "📊 部署环境: ${{ job.environment }}"
-        echo "📅 部署时间: $(date)"
-        echo "=========================================="
+        echo "📊 部署环境: github-pages"
+        echo "⏰ 部署时间: $(date)"
+        echo "========================================"
