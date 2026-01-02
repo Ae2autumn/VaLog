@@ -180,37 +180,63 @@ class VaLogGenerator:
         
         return re.sub(pattern, replace_html, content, flags=re.DOTALL)
     
-    def extract_summary(self, content: str, max_length: int = 100) -> str:
-        """提取文章摘要"""
-        # 去除Markdown标题、日期、标签等元数据
-        lines = content.split('\n')
-        content_lines = []
+    def extract_summary(self, content: str) -> Optional[str]:
+    """从内容中提取摘要，优先提取第一个!vml-<span>标签内容"""
+    # 查找第一个!vml-<span>标签
+    vml_pattern = r'!vml-<span[^>]*>(.+?)</span>'
+    vml_match = re.search(vml_pattern, content)
+    
+    if vml_match:
+        # 提取span内容作为摘要
+        return vml_match.group(1).strip()
+    
+    # 如果没有找到匹配的span标签，返回None
+    return None
+
+def process_article(self, issue: Dict[str, Any], is_special: bool = False) -> Optional[Dict[str, Any]]:
+    """处理单个issue为文章数据"""
+    try:
+        issue_number = issue['number']
+        title = issue['title']
+        created_at = issue['created_at']
+        labels = [label['name'] for label in issue.get('labels', [])]
+        body = issue['body'] or ''
         
-        for line in lines:
-            # 跳过空行和元数据行
-            if not line.strip():
-                continue
-            if line.startswith('#') or line.startswith('日期:') or line.startswith('标签:'):
-                continue
-            content_lines.append(line)
+        # 去除pinned、top、special标签
+        labels = [label for label in labels if label not in ['pinned', 'top', 'special']]
         
-        full_content = ' '.join(content_lines)
+        # 解析日期
+        date_obj = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        date_str = date_obj.strftime('%Y-%m-%d')
         
-        # 处理HTML内联语法
-        full_content = self.process_html_inline(full_content)
+        # 提取摘要
+        summary = self.extract_summary(body)
         
-        # Markdown转HTML
-        html_content = markdown.markdown(full_content)
+        # 处理内容
+        processed_body = self.process_html_inline(body)
+        html_content = markdown.markdown(processed_body)
         
-        # 去除HTML标签获取纯文本
-        text_content = re.sub(r'<[^>]+>', '', html_content)
+        # 生成文章数据
+        article_data = {
+            'id': f"{'special-' if is_special else 'article-'}{issue_number}",
+            'title': title,
+            'summary': summary,  # 可能为None
+            'tags': labels,
+            'date': date_str,
+            'content': html_content,
+            'url': f"/article/{issue_number}.html" if not is_special else f"https://github.com/issues/{issue_number}",
+            'has_summary': summary is not None  # 添加摘要存在标志
+        }
         
-        # 截取摘要
-        if len(text_content) > max_length:
-            summary = text_content[:max_length] + '...'
-        else:
-            summary = text_content
+        # 保存原始Markdown
+        self.save_original_markdown(issue_number, body)
         
+        return article_data
+        
+    except Exception as e:
+        print(f"处理文章 {issue.get('number', 'unknown')} 时出错: {e}")
+        return None
+    
         return summary
     
     def generate_vertical_title(self, title: str, tags: List[str]) -> str:
