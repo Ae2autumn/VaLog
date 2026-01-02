@@ -1,0 +1,32 @@
+# 基础博客配置
+blog:
+  avatar: "static/avatar.png"           # 头像文件路径
+  name: "VaLog"                         # 博客名称
+  description: "个人技术博客"            # 博客描述
+  favicon: "static/favicon.ico"         # 网站图标
+
+# 浮动菜单配置
+floating_menu:
+  - tag: "about"                        # 需要匹配的文章标签
+    display: "关于"                      # 菜单显示文本
+  - tag: "contact"                      # 需要匹配的文章标签
+    display: "联系"                      # 菜单显示文本
+  # 用户可自定义添加，但总项目数不超过10个
+
+# Special卡片配置
+special:
+  top: false                            # true: 置顶文章放入Special | false: 普通列表显示置顶
+  view:                                 # 当Special无内容时显示的文本信息
+    RF_Information: "备案信息文本"
+    RF_Link: "https://beian.miit.gov.cn"
+    Copyright: "© 2023 VaLog 版权所有"
+    C_Link: "https://github.com"
+    Total_time: "2023.01.01"            # 格式: yyyy.mm.dd，自动计算运行天数
+    Others: "其他说明文本"
+
+# 主题配置
+theme:
+  mode: "default"                       # 默认主题配置,只有两个状态,default和light(因为默认就是dark),如果为light则将localstorage中的"theme"值修改为"light"
+  primary_color: "#e74c3c"              # 主题主色
+  dark_bg: "#adadad"                    # 暗色背景
+  light_bg: "#f5f7fa"                   # 亮色背景
