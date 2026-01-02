@@ -1,8 +1,8 @@
 # 基础博客配置
 blog:
-  avatar: "static/avatar.png"           # 头像文件路径（相对路径）
+  avatar: "https://avatars.githubusercontent.com/u/195545824?v=4"           # 头像文件路径（相对路径）
   name: "VaLog"                         # 博客名称
-  description: "个人技术博客"            # 博客描述
+  description: "A\个人技术博客"            # 博客描述
   favicon: "static/favicon.ico"         # 网站图标
 
 # 浮动菜单配置
