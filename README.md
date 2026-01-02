@@ -86,8 +86,8 @@ static/                        # 静态资源
 ├── avatar.png                # 头像
 ├── favicon.ico               # 图标
 └── custom/                   # 用户自定义
-    ├── custom.css
-    └── custom.js
+      ├── custom.css
+      └── custom.js
 
 README.md                      # 项目说明
 LICENSE                        # 许可证
