@@ -1,4 +1,4 @@
-name: VaLog Blog Generator
+name: VaLog Blog
 
 on:
   push:
@@ -17,13 +17,10 @@ jobs:
       contents: write
       issues: read
       pages: write
-      id-token: write
     
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
     
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -32,44 +29,17 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install PyYAML Jinja2 markdown requests
     
-    - name: Configure Git
-      run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
-    
-    - name: Run VaLog Generator
+    - name: Run Generator
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        python VaLog.py
-    
-    - name: Check for changes
-      id: git-check
-      run: |
-        if git diff --quiet; then
-          echo "changes=false" >> $GITHUB_OUTPUT
-        else
-          echo "changes=true" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Commit and push changes
-      if: steps.git-check.outputs.changes == 'true'
-      run: |
-        git add .
-        git commit -m "Update blog content [skip ci]"
-        git push origin main
-    
-    - name: Setup Pages
-      uses: actions/configure-pages@v3
-    
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: './docs'
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: python VaLog.py
     
     - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
