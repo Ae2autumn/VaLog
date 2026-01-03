@@ -34,6 +34,5 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # 脚本生成的目录
-          branch: gh-pages # 部署到的分支
-          clean: true
+          folder: docs # 对应 OUTPUT_DIR
+          branch: gh-pages
