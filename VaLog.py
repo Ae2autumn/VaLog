@@ -5,48 +5,58 @@ import markdown
 from jinja2 import Template
 from datetime import datetime
 
-# ==================== 配置区 ====================
+# ==================== 路径配置（适配你的结构） ====================
 CONFIG_FILE = "config.yml"
-HOME_TEMPLATE = "home.html"
-ARTICLE_TEMPLATE = "article.html"
-OUTPUT_DIR = "dist"
+TEMPLATE_DIR = "template"
+HOME_TEMPLATE = os.path.join(TEMPLATE_DIR, "home.html")
+ARTICLE_TEMPLATE = os.path.join(TEMPLATE_DIR, "article.html")
+OUTPUT_DIR = "docs"  # 你配置的是 docs/ 用于 GitHub Pages
 
-# ==================== 核心逻辑 ====================
 class VaLogGenerator:
     def __init__(self):
+        # 1. 严格检查配置文件
+        if not os.path.exists(CONFIG_FILE):
+            raise FileNotFoundError(f"❌ 找不到配置文件: {CONFIG_FILE}")
+            
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             self.config = yaml.safe_load(f)
+            
+        if not self.config or 'github' not in self.config:
+            print(f"DEBUG - 当前 config 内容: {self.config}")
+            raise KeyError("❌ config.yml 格式不正确，缺少 'github' 节点。请检查缩进！")
         
-        # 确保输出目录存在
-        if not os.path.exists(OUTPUT_DIR):
-            os.makedirs(OUTPUT_DIR)
-        if not os.path.exists(f"{OUTPUT_DIR}/article"):
-            os.makedirs(f"{OUTPUT_DIR}/article")
+        # 2. 确保输出目录存在
+        os.makedirs(os.path.join(OUTPUT_DIR, "article"), exist_ok=True)
 
     def fetch_issues(self):
-        """从 GitHub API 获取 Issues"""
-        url = f"https://api.github.com/repos/{self.config['github']['repo']}/issues"
-        params = {'state': 'open', 'creator': self.config['github']['repo'].split('/')[0]}
-        # 如果需要私有库或提高配率，可在此处添加 Token 验证
-        response = requests.get(url, params=params)
+        repo = self.config['github']['repo']
+        url = f"https://api.github.com/repos/{repo}/issues"
+        # 增加 GitHub Token 防止 API 限制
+        headers = {}
+        token = os.getenv("GITHUB_TOKEN")
+        if token:
+            headers["Authorization"] = f"token {token}"
+            
+        params = {'state': 'open'}
+        response = requests.get(url, params=params, headers=headers)
+        if response.status_code != 200:
+            raise Exception(f"❌ 无法获取 Issues: {response.text}")
         return response.json()
 
     def parse_issue(self, issue):
-        """解析单条 Issue 数据"""
         tags = [label['name'] for label in issue['labels']]
+        # 转换 Markdown
         content_html = markdown.markdown(issue['body'], extensions=['extra', 'codehilite', 'toc'])
-        
-        # 提取第一行作为简介（去除 Markdown 标记）
-        raw_body = issue['body'].split('\n')[0][:100]
+        # 提取第一行作为简介
+        summary_text = issue['body'].split('\n')[0][:100]
         
         return {
             "id": str(issue['number']),
             "title": issue['title'],
             "tags": tags,
             "date": issue['created_at'].split('T')[0],
-            "content_raw": issue['body'],
             "content_html": content_html,
-            "summary": [raw_body], # 适配 home.html 的数组格式
+            "summary": [summary_text],
             "url": f"article/{issue['number']}.html"
         }
 
@@ -55,21 +65,16 @@ class VaLogGenerator:
         articles = []
         specials = []
         
-        # 特殊标签逻辑配置
-        special_tag = self.config['logic']['special_tag']
-        menu_tag_mapping = self.config['floating_menu']
+        special_tag = self.config.get('logic', {}).get('special_tag', 'special')
 
         for issue in issues:
             if 'pull_request' in issue: continue
-            
             data = self.parse_issue(issue)
             
-            # 1. 判定是否为 Special (置顶/特殊展示)
             if special_tag in data['tags']:
-                # 如果只有内容没有标题，触发模板的“仅文本模式”
                 specials.append({
                     "id": data['id'],
-                    "title": data['title'] if data['title'].lower() != "special" else "",
+                    "title": "" if data['title'].lower() == "special" else data['title'],
                     "tags": [t for t in data['tags'] if t != special_tag],
                     "content": data['summary'],
                     "url": data['url']
@@ -77,37 +82,27 @@ class VaLogGenerator:
             else:
                 articles.append(data)
 
-        # 2. 渲染文章详情页
+        # 渲染文章页
         with open(ARTICLE_TEMPLATE, 'r', encoding='utf-8') as f:
             article_tpl = Template(f.read())
 
         for art in articles:
-            rendered_art = article_tpl.render(
-                article=art,
-                config=self.config
-            )
-            with open(f"{OUTPUT_DIR}/{art['url']}", 'w', encoding='utf-8') as f:
+            rendered_art = article_tpl.render(article=art, config=self.config)
+            with open(os.path.join(OUTPUT_DIR, art['url']), 'w', encoding='utf-8') as f:
                 f.write(rendered_art)
 
-        # 3. 处理动态菜单链接
-        # 逻辑：遍历 config 中的菜单，如果其 display 名称对应一个标签，则自动链接到该标签下的最新文章
-        final_menu = []
-        for item in menu_tag_mapping:
-            target_tag = item['display']
-            # 寻找带有该标签的第一篇文章
-            match = next((a for a in articles if target_tag in a['tags']), None)
-            final_menu.append({
-                "display": item['display'],
-                "link": match['url'] if match else "#"
-            })
-
-        # 4. 渲染首页
+        # 渲染首页
         with open(HOME_TEMPLATE, 'r', encoding='utf-8') as f:
-            # 预处理：将静态占位符替换为 Jinja2 变量
-            home_html = f.read().replace('src="Url"', 'src="{{ config.me.avatar }}"')
-            home_html = home_html.replace('VaLog', '{{ config.blog.title }}')
-            home_html = home_html.replace('Introduction', '{{ config.blog.description }}')
-            home_tpl = Template(home_html)
+            home_raw = f.read()
+            # 这里的占位符替换逻辑需配合模板修改
+            home_tpl = Template(home_raw)
+
+        # 动态菜单逻辑
+        final_menu = []
+        for item in self.config.get('floating_menu', []):
+            target = item['display']
+            match = next((a for a in articles if target in a['tags']), None)
+            final_menu.append({"display": target, "link": match['url'] if match else "#"})
 
         final_home = home_tpl.render(
             articles=articles,
@@ -116,10 +111,10 @@ class VaLogGenerator:
             config=self.config
         )
         
-        with open(f"{OUTPUT_DIR}/index.html", 'w', encoding='utf-8') as f:
+        with open(os.path.join(OUTPUT_DIR, "index.html"), 'w', encoding='utf-8') as f:
             f.write(final_home)
 
-        print(f"✅ 生成成功！共 {len(articles)} 篇文章，{len(specials)} 个特殊卡片。")
+        print(f"🚀 生成成功！输出至 {OUTPUT_DIR} 目录。")
 
 if __name__ == "__main__":
     VaLogGenerator().generate()
