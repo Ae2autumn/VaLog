@@ -1,5 +1,4 @@
-PyYAML>=6.0
+requests>=2.31.0
+PyYAML>=6.0.1
 Jinja2>=3.1.2
 markdown>=3.4.4
-requests>=2.31.0
-Pillow>=10.0.0
