@@ -1096,11 +1096,10 @@
    <script>
       // ==================== 数据与状态管理 ====================
       const blogData = {
-         articles: {{ articles | tojson }},
-         specials: {{ specials | tojson }}
+         articles: {{ articles | tojson | safe }},
+         specials: {{ specials | tojson | safe }}
       };
-
-      const menuItems = {{ menu_items | tojson }};
+      const menuItems = {{ menu_items | tojson | safe }};
 
       // ==================== 工具函数 ====================
       function debounce(func, delay) {
