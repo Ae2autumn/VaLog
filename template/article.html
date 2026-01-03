@@ -4,7 +4,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>{{ article.title }} - {{ blog.name }}</title>
+   <title>{{ article.title }} - {{ config.blog.title }}</title>
    <link rel="icon" href="{{ blog.favicon }}">
    <style>
       * {
@@ -381,20 +381,17 @@
 <body>
    <div class="header">
       <h1 class="title">{{ article.title }}</h1>
-      {% if article.summary %}
-      <p class="summary">
-         {{ article.summary }}
-      </p>
-      {% endif %}
+      <p class="summary">{{ article.summary[0] }}</p>
       <div class="date">{{ article.date }}</div>
-      {% if article.tags %}
       <div class="tags">
          {% for tag in article.tags %}
          <span class="tag">{{ tag }}</span>
          {% endfor %}
       </div>
-      {% endif %}
    </div>
+
+<div class="content">
+   {{ article.content_html | safe }} </div>
 
    <div class="content">
       {{ article.content|safe }}
