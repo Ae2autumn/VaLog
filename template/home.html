@@ -5,7 +5,7 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta name="description" content="VaLog">
-   <title>VaLog</title>
+   <title>{{ config.blog.name }}</title>
    <link rel="icon" href="favicon.ico">
    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style"
                                                                                                                            onload="this.onload=null;this.rel='stylesheet'">
@@ -1048,13 +1048,13 @@
                   <img src="{{AVATAR_URL}}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                </div>
                <div class="mobile-title-container" id="titleToggle" tabindex="0" role="button" aria-label="收起标题">
-                  <div class="mobile-title">{{config.blog.title}}</div>
+                  <div class="mobile-title">{{config.blog.name}}</div>
                </div>
                <button class="menu-btn" id="menuBtn" aria-label="浮动菜单" aria-expanded="false"
                                                                                                                                        aria-controls="floatingMenu">≡</button>
             </div>
             <div class="mobile-top-card">
-               <p>{{config.blog.desscription}}</p>
+               <p>{{config.blog.desscriptions}}</p>
             </div>
 
             <div class="floating-menu" id="floatingMenu" role="menu" aria-hidden="true">
