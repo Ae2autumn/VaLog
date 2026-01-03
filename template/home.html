@@ -1097,17 +1097,11 @@
    <script>
       // ==================== 数据与状态管理 ====================
       const blogData = {
-          articles: [/* 这里会被替换为实际文章数据 */],
-          specials: [/* 这里会被替换为实际Special数据 */]
+         articles: {{ articles | tojson }},
+         specials: {{ specials | tojson }}
       };
 
-      const menuItems = [/* 这里会被替换为菜单项数据 */];
-      const state = {
-          isSearchMode: false,
-          originalArticles: [...blogData.articles],
-          currentArticles: [],
-          searchType: 'title'
-      };
+      const menuItems = {{ menu_items | tojson }};
 
       // ==================== 工具函数 ====================
       function debounce(func, delay) {
