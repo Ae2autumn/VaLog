@@ -1,24 +1,20 @@
-name: VaLog Blog Deployment
+name: Deploy VaLog
 
 on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main  # 当你修改模板或配置并推送到 main 时触发
+  workflow_dispatch: # 允许手动触发
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
     steps:
-      # 1. 更新到 v4
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. 更新到 v5
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -27,24 +23,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install markdown pyyaml requests
+          pip install requests PyYAML markdown jinja2
 
-      - name: Generate Blog
-        run: python VaLog.py --mode auto
+      - name: Generate Site
+        run: python VaLog.py
         env:
+          # 如果你的仓库是私有的，或者为了防止 API 限制，建议配置此 Token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
 
-      # 3. 更新到 v5
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      # 4. 更新到 v3 (非常重要)
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./docs
-
-      # 5. 更新到 v4 (配合 v3 使用)
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist # 脚本生成的目录
+          branch: gh-pages # 部署到的分支
+          clean: true
