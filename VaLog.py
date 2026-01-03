@@ -1,618 +1,125 @@
-#!/usr/bin/env python3
-"""
-VaLog 静态博客生成器 - 完整版（包含部署）
-版本: 4.1
-功能：生成 + 部署 + GitHub Actions 集成
-"""
-
 import os
-import sys
-import json
 import yaml
-import re
-import markdown
 import requests
-import shutil
-import subprocess
+import markdown
+from jinja2 import Template
 from datetime import datetime
-from typing import Dict, List, Any
-from pathlib import Path
 
+# ==================== 配置区 ====================
+CONFIG_FILE = "config.yml"
+HOME_TEMPLATE = "home.html"
+ARTICLE_TEMPLATE = "article.html"
+OUTPUT_DIR = "dist"
+
+# ==================== 核心逻辑 ====================
 class VaLogGenerator:
-    """VaLog博客生成器主类"""
-    
-    def __init__(self, config_path="config.yml"):
-        self.config = self.load_config(config_path)
-        self.issues = []
-        self.articles = []
-        self.specials = []
-        self.base_data = {}
-        self.github_token = os.environ.get("GITHUB_TOKEN", "")
-        self.github_repo = os.environ.get("GITHUB_REPOSITORY", "")
-        self.docs_dir = "docs"
+    def __init__(self):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            self.config = yaml.safe_load(f)
         
-        # 确保必要的目录存在
-        self.ensure_directories()
-        
-    def load_config(self, path: str) -> Dict:
-        """加载配置文件"""
-        if not os.path.exists(path):
-            print(f"错误: 配置文件 {path} 不存在")
-            sys.exit(1)
-            
-        with open(path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
-            
-        return config
-    
-    def fetch_github_issues(self) -> List[Dict]:
-        """获取GitHub Issues"""
-        if not self.github_repo:
-            print("警告: 未设置GITHUB_REPOSITORY，使用模拟数据")
-            return self.get_mock_issues()
-            
-        print(f"正在获取GitHub仓库 {self.github_repo} 的Issues...")
-        
-        url = f"https://api.github.com/repos/{self.github_repo}/issues"
-        headers = {}
-        if self.github_token:
-            headers["Authorization"] = f"token {self.github_token}"
-        
-        params = {
-            "state": "open",
-            "per_page": 100
-        }
-        
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            response.raise_for_status()
-            issues = response.json()
-            print(f"成功获取 {len(issues)} 个Issue")
-            return issues
-        except Exception as e:
-            print(f"获取GitHub Issues失败: {e}")
-            print("使用模拟数据")
-            return self.get_mock_issues()
-    
-    def get_mock_issues(self) -> List[Dict]:
-        """获取模拟数据，用于测试"""
-        return [
-            {
-                "number": 1,
-                "title": "欢迎使用VaLog博客系统",
-                "body": """!vml-<span>这是一个基于GitHub Issues的静态博客系统</span>
-                
-## 功能特性
-- 基于GitHub Issues管理文章
-- 自动生成静态网站
-- 响应式设计
-- 搜索功能
-- 主题切换""",
-                "created_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "labels": [{"name": "教程"}, {"name": "介绍"}],
-                "state": "open"
-            },
-            {
-                "number": 2,
-                "title": "VaLog使用教程",
-                "body": """!vml-<span>VaLog博客系统详细使用教程</span>
+        # 确保输出目录存在
+        if not os.path.exists(OUTPUT_DIR):
+            os.makedirs(OUTPUT_DIR)
+        if not os.path.exists(f"{OUTPUT_DIR}/article"):
+            os.makedirs(f"{OUTPUT_DIR}/article")
 
-## 快速开始
-1. 在GitHub上创建仓库
-2. 创建Issue作为文章
-3. 运行生成器
-4. 部署到GitHub Pages""",
-                "created_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "labels": [{"name": "教程"}, {"name": "文档"}],
-                "state": "open"
-            }
-        ]
-    
-    def process_issues(self):
-        """处理Issues为文章数据"""
-        self.issues = self.fetch_github_issues()
+    def fetch_issues(self):
+        """从 GitHub API 获取 Issues"""
+        url = f"https://api.github.com/repos/{self.config['github']['repo']}/issues"
+        params = {'state': 'open', 'creator': self.config['github']['repo'].split('/')[0]}
+        # 如果需要私有库或提高配率，可在此处添加 Token 验证
+        response = requests.get(url, params=params)
+        return response.json()
+
+    def parse_issue(self, issue):
+        """解析单条 Issue 数据"""
+        tags = [label['name'] for label in issue['labels']]
+        content_html = markdown.markdown(issue['body'], extensions=['extra', 'codehilite', 'toc'])
         
-        for issue in self.issues:
-            if "pull_request" in issue:
-                continue
-            
-            issue_id = issue["number"]
-            title = issue["title"]
-            created_at = issue["created_at"][:10] if issue.get("created_at") else datetime.now().strftime("%Y-%m-%d")
-            labels = [label["name"] for label in issue.get("labels", [])]
-            
-            raw_content = issue.get("body", "")
-            
-            # 提取摘要
-            summary_match = re.search(r'!vml-<span[^>]*>(.*?)</span>', raw_content)
-            summary = summary_match.group(1).strip() if summary_match else ""
-            
-            # 移除摘要行
-            content = re.sub(r'!vml-<span[^>]*>.*?</span>\s*\n?', '', raw_content, count=1)
-            
-            # 处理HTML内联语法
-            content = re.sub(r'!vml-(.+?)(?=\n|$)', lambda m: m.group(1), content)
-            
-            # Markdown转HTML
-            try:
-                html_content = markdown.markdown(content, extensions=['extra', 'codehilite'])
-            except:
-                html_content = markdown.markdown(content)
-            
-            # 生成渐变颜色
-            gradients = [
-                ["#e74c3c", "#c0392b"],  # 红色
-                ["#3498db", "#2980b9"],  # 蓝色
-                ["#2ecc71", "#27ae60"],  # 绿色
-                ["#9b59b6", "#8e44ad"],  # 紫色
-                ["#e67e22", "#d35400"],  # 橙色
-            ]
-            gradient = gradients[len(self.articles) % len(gradients)]
-            
-            article = {
-                "id": f"article-{issue_id}",
-                "issue_id": issue_id,
-                "title": title,
-                "tags": labels,
-                "verticalTitle": labels[0] if labels else "文章",
-                "date": created_at,
-                "summary": summary,
-                "content": html_content,
-                "raw_content": content,
-                "url": f"/article/{issue_id}.html",
-                "gradient": gradient
-            }
-            
-            self.articles.append(article)
-            self.save_raw_markdown(issue_id, content)
+        # 提取第一行作为简介（去除 Markdown 标记）
+        raw_body = issue['body'].split('\n')[0][:100]
         
-        print(f"成功处理 {len(self.articles)} 篇文章")
-    
-    def save_raw_markdown(self, issue_id: int, content: str):
-        """保存原始Markdown"""
-        os.makedirs("O-MD", exist_ok=True)
-        with open(f"O-MD/{issue_id}.md", 'w', encoding='utf-8') as f:
-            f.write(content)
-    
-    def generate_base_yaml(self):
-        """生成base.yaml文件"""
-        blog_info = {
-            "avatar": self.config["blog"]["avatar"],
-            "name": self.config["blog"]["name"],
-            "description": self.config["blog"]["description"],
-            "favicon": self.config["blog"]["favicon"]
+        return {
+            "id": str(issue['number']),
+            "title": issue['title'],
+            "tags": tags,
+            "date": issue['created_at'].split('T')[0],
+            "content_raw": issue['body'],
+            "content_html": content_html,
+            "summary": [raw_body], # 适配 home.html 的数组格式
+            "url": f"article/{issue['number']}.html"
         }
+
+    def generate(self):
+        issues = self.fetch_issues()
+        articles = []
+        specials = []
         
-        articles_data = []
-        for article in self.articles:
-            paragraphs = []
-            if article["raw_content"]:
-                raw_paragraphs = article["raw_content"].split('\n\n')
-                paragraphs = [p.strip() for p in raw_paragraphs if p.strip()]
-                if len(paragraphs) > 3:
-                    paragraphs = paragraphs[:3]
+        # 特殊标签逻辑配置
+        special_tag = self.config['logic']['special_tag']
+        menu_tag_mapping = self.config['floating_menu']
+
+        for issue in issues:
+            if 'pull_request' in issue: continue
             
-            article_data = {
-                "id": article["id"],
-                "title": article["title"],
-                "tags": article["tags"],
-                "verticalTitle": article["verticalTitle"],
-                "date": article["date"],
-                "content": paragraphs,
-                "url": article["url"],
-                "gradient": article["gradient"]
-            }
-            articles_data.append(article_data)
-        
-        specials_data = []
-        special_config = self.config.get("special", {})
-        
-        if not specials_data and "view" in special_config:
-            view_content = []
-            for key, value in special_config["view"].items():
-                if key == "Total_time":
-                    try:
-                        start_date = datetime.strptime(value, "%Y.%m.%d")
-                        days = (datetime.now() - start_date).days
-                        view_content.append(f"已运行 {days} 天")
-                    except:
-                        view_content.append(value)
-                elif key == "RF_Link":
-                    view_content.append(f'<a href="{value}" target="_blank">{special_config["view"]["RF_Information"]}</a>')
-                elif key == "C_Link":
-                    view_content.append(f'<a href="{value}" target="_blank">{special_config["view"]["Copyright"]}</a>')
-                elif key not in ["RF_Information", "Copyright"]:
-                    view_content.append(value)
+            data = self.parse_issue(issue)
             
-            specials_data.append({
-                "id": "special-text-only",
-                "content": view_content
+            # 1. 判定是否为 Special (置顶/特殊展示)
+            if special_tag in data['tags']:
+                # 如果只有内容没有标题，触发模板的“仅文本模式”
+                specials.append({
+                    "id": data['id'],
+                    "title": data['title'] if data['title'].lower() != "special" else "",
+                    "tags": [t for t in data['tags'] if t != special_tag],
+                    "content": data['summary'],
+                    "url": data['url']
+                })
+            else:
+                articles.append(data)
+
+        # 2. 渲染文章详情页
+        with open(ARTICLE_TEMPLATE, 'r', encoding='utf-8') as f:
+            article_tpl = Template(f.read())
+
+        for art in articles:
+            rendered_art = article_tpl.render(
+                article=art,
+                config=self.config
+            )
+            with open(f"{OUTPUT_DIR}/{art['url']}", 'w', encoding='utf-8') as f:
+                f.write(rendered_art)
+
+        # 3. 处理动态菜单链接
+        # 逻辑：遍历 config 中的菜单，如果其 display 名称对应一个标签，则自动链接到该标签下的最新文章
+        final_menu = []
+        for item in menu_tag_mapping:
+            target_tag = item['display']
+            # 寻找带有该标签的第一篇文章
+            match = next((a for a in articles if target_tag in a['tags']), None)
+            final_menu.append({
+                "display": item['display'],
+                "link": match['url'] if match else "#"
             })
-        
-        menu_items_data = []
-        floating_menu = self.config.get("floating_menu", [])
-        
-        for menu_item in floating_menu:
-            tag = menu_item.get("tag", "")
-            display = menu_item.get("display", tag)
-            
-            url = None
-            for article in self.articles:
-                if tag in article["tags"]:
-                    url = article["url"]
-                    break
-            
-            menu_items_data.append({
-                "tag": tag,
-                "display": display,
-                "url": url if url else "#"
-            })
-        
-        self.base_data = {
-            "blog": blog_info,
-            "articles": articles_data,
-            "specials": specials_data,
-            "menu_items": menu_items_data
-        }
-        
-        with open("base.yaml", 'w', encoding='utf-8') as f:
-            yaml.dump(self.base_data, f, allow_unicode=True, default_flow_style=False)
-        
-        print("base.yaml 生成完成")
-        return self.base_data
-    
-    def generate_home_page(self):
-        """生成主页"""
-        self.ensure_template_files()
-        
-        home_template_path = "template/home.html"
-        if not os.path.exists(home_template_path):
-            print("错误: home.html模板不存在")
-            return
-        
-        os.makedirs(self.docs_dir, exist_ok=True)
-        
-        with open(home_template_path, "r", encoding="utf-8") as f:
-            template = f.read()
-        
-        # 获取配置值
-        blog_name = self.config['blog']['name']
-        blog_description = self.config['blog']['description']
-        avatar_url = self.config['blog']['avatar']
-        favicon_url = self.config['blog']['favicon']
-        
-        # 替换模板变量 - 修正替换逻辑
-        replacements = [
-            ("<title>VaLog</title>", f"<title>{blog_name}</title>"),
-            ('href="favicon.ico"', f'href="{favicon_url}"'),
-            ('src="{{AVATAR_URL}}"', f'src="{avatar_url}"'),
-            ('<div class="mobile-title">VaLog</div>', f'<div class="mobile-title">{blog_name}</div>'),
-            ('<h2>{{BLOG_NAME}}</h2>', f'<h2>{blog_name}</h2>'),
-            ('<p>{{BLOG_DESCRIPTION}}</p>', f'<p>{blog_description}</p>'),
-        ]
-        
-        for old, new in replacements:
-            template = template.replace(old, new)
-        
-        # 准备JavaScript数据
-        articles_json = json.dumps(self.base_data['articles'], ensure_ascii=False, indent=2)
-        specials_json = json.dumps(self.base_data['specials'], ensure_ascii=False, indent=2)
-        menu_items_json = json.dumps(self.base_data['menu_items'], ensure_ascii=False, indent=2)
-        
-        # 替换JavaScript部分
-        js_start = "// ==================== 数据与状态管理 ===================="
-        if js_start in template:
-            js_section = f"""{js_start}
-const blogData = {{
-  articles: {articles_json},
-  specials: {specials_json}
-}};
 
-const menuItems = {menu_items_json};"""
-            
-            template_parts = template.split(js_start, 1)
-            if len(template_parts) == 2:
-                # 找到JavaScript部分的结束位置
-                js_content = template_parts[1]
-                # 找到下一个注释行或script标签结束
-                end_pattern = r'(?=\s*// =|\s*</script>|\s*$)'
-                import re
-                match = re.search(end_pattern, js_content, re.DOTALL)
-                if match:
-                    template = template_parts[0] + js_section + js_content[match.start():]
-                else:
-                    template = template_parts[0] + js_section
-        
-        with open(f"{self.docs_dir}/index.html", "w", encoding="utf-8") as f:
-            f.write(template)
-        
-        print(f"主页生成完成: {self.docs_dir}/index.html")
-    
-    def generate_article_pages(self):
-        """生成文章页"""
-        self.ensure_template_files()
-        
-        article_template_path = "template/article.html"
-        if not os.path.exists(article_template_path):
-            print("错误: article.html模板不存在")
-            return
-        
-        os.makedirs(f"{self.docs_dir}/article", exist_ok=True)
-        
-        with open(article_template_path, "r", encoding="utf-8") as f:
-            template = f.read()
-        
-        for article in self.articles:
-            article_html = template
-            
-            # 替换变量
-            replacements = [
-                ("{{ article.title }} - {{ blog.name }}", f"{article['title']} - {self.config['blog']['name']}"),
-                ("{{ article.title }}", article['title']),
-                ("{{ blog.name }}", self.config["blog"]["name"]),
-                ("{{ blog.favicon }}", self.config["blog"]["favicon"]),
-                ("{{ article.date }}", article['date']),
-                ("{{ article.content|safe }}", article['content']),
-            ]
-            
-            for old, new in replacements:
-                article_html = article_html.replace(old, new)
-            
-            # 替换标签
-            if "{% for tag in article.tags %}" in article_html:
-                tags_html = ''.join([f'<span class="tag">{tag}</span>' for tag in article['tags']])
-                article_html = article_html.replace('{% for tag in article.tags %}<span class="tag">{{ tag }}</span>{% endfor %}', 
-                                                  tags_html)
-            
-            # 替换摘要
-            if "{{ article.summary }}" in article_html:
-                if article['summary']:
-                    article_html = article_html.replace("{{ article.summary }}", article['summary'])
-                else:
-                    # 移除包含摘要的段落
-                    import re
-                    article_html = re.sub(r'<p[^>]*>\s*{{ article\.summary }}\s*</p>', '', article_html)
-            
-            with open(f"{self.docs_dir}/article/{article['issue_id']}.html", "w", encoding="utf-8") as f:
-                f.write(article_html)
-        
-        print(f"文章页生成完成: {len(self.articles)} 个文件")
-    
-    def copy_static_resources(self):
-        """复制静态资源"""
-        static_src = "static"
-        static_dst = f"{self.docs_dir}/static"
-        
-        if os.path.exists(static_src):
-            if os.path.exists(static_dst):
-                shutil.rmtree(static_dst)
-            shutil.copytree(static_src, static_dst)
-            print("静态资源复制完成")
-        else:
-            print("警告: 静态资源目录不存在，创建默认目录")
-            os.makedirs(static_dst, exist_ok=True)
-            
-            # 创建默认favicon.ico
-            favicon_path = os.path.join(static_dst, "favicon.ico")
-            with open(favicon_path, 'wb') as f:
-                # 创建一个简单的favicon占位符
-                pass
-    
-    def create_deployment_files(self):
-        """创建部署所需的文件"""
-        print("\n📦 创建部署文件...")
-        
-        # 1. 创建 .nojekyll 文件
-        nojekyll_path = os.path.join(self.docs_dir, ".nojekyll")
-        with open(nojekyll_path, "w", encoding="utf-8") as f:
-            f.write("")
-        print("✅ 创建 .nojekyll 文件")
-        
-        # 2. 创建部署信息文件
-        info_path = os.path.join(self.docs_dir, "_deploy-info.md")
-        with open(info_path, "w", encoding="utf-8") as f:
-            f.write(f"# VaLog 博客部署信息\n\n")
-            f.write(f"- **生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"- **文章数量**: {len(self.articles)}\n")
-            if self.github_repo:
-                username = self.github_repo.split('/')[0]
-                repo_name = self.github_repo.split('/')[1]
-                f.write(f"- **博客地址**: https://{username}.github.io/{repo_name}/\n")
-                f.write(f"- **GitHub仓库**: https://github.com/{self.github_repo}\n")
-            f.write(f"- **版本**: VaLog 4.1\n")
-        print("✅ 创建部署信息文件")
-    
-    def auto_deploy(self):
-        """自动部署到GitHub Pages"""
-        print("\n" + "="*60)
-        print("🤖 开始自动部署流程")
-        print("="*60)
-        
-        # 检查是否在GitHub Actions中
-        if os.environ.get('GITHUB_ACTIONS') != 'true':
-            print("⚠️  警告: 不在GitHub Actions环境中")
-            print("自动部署只能在GitHub Actions中运行")
-            self.show_deployment_info()
-            return False
-        
-        print("✅ 检测到GitHub Actions环境")
-        
-        # 配置Git
-        try:
-            subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions"], check=True)
-            subprocess.run(["git", "config", "--global", "user.email", "actions@github.com"], check=True)
-            
-            # 添加、提交和推送更改
-            subprocess.run(["git", "add", "."], check=True)
-            subprocess.run(["git", "commit", "-m", "Auto-deploy VaLog blog"], check=True)
-            subprocess.run(["git", "push"], check=True)
-            
-            print("✅ 更改已推送到GitHub")
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Git操作失败: {e}")
-            return False
-        
-        # 显示访问地址
-        if self.github_repo:
-            username = self.github_repo.split('/')[0]
-            repo_name = self.github_repo.split('/')[1]
-            print(f"\n🌐 博客将部署到:")
-            print(f"   https://{username}.github.io/{repo_name}/")
-        
-        print("\n⏳ 等待GitHub Pages部署完成...")
-        print("部署通常需要1-2分钟")
-        
-        return True
-    
-    def manual_deploy_instructions(self):
-        """显示手动部署说明"""
-        print("\n" + "="*60)
-        print("📖 手动部署说明")
-        print("="*60)
-        
-        print("\n1️⃣ 推送代码到GitHub:")
-        print("   git add .")
-        print("   git commit -m 'Update blog'")
-        print("   git push origin main")
-        
-        print("\n2️⃣ 配置GitHub Pages:")
-        print("   a. 访问: https://github.com/你的用户名/你的仓库名/settings/pages")
-        print("   b. 设置Source为'GitHub Actions'")
-        print("      - 或选择'Deploy from a branch'")
-        print("      - Branch: main, Folder: /docs")
-        print("   c. 点击Save")
-        
-        print("\n3️⃣ 等待部署:")
-        print("   - 通常需要1-2分钟")
-        print("   - 刷新页面查看状态")
-        
-        if self.github_repo:
-            username = self.github_repo.split('/')[0]
-            repo_name = self.github_repo.split('/')[1]
-            print(f"\n4️⃣ 访问博客:")
-            print(f"   https://{username}.github.io/{repo_name}/")
-        
-        print("\n" + "="*60)
-    
-    def show_deployment_info(self):
-        """显示部署信息"""
-        print("\n" + "="*60)
-        print("🚀 VaLog博客部署信息")
-        print("="*60)
-        
-        if self.github_repo:
-            username = self.github_repo.split('/')[0]
-            repo_name = self.github_repo.split('/')[1]
-            blog_url = f"https://{username}.github.io/{repo_name}/"
-            
-            print(f"\n🌐 博客地址:")
-            print(f"   {blog_url}")
-        else:
-            print(f"\n📁 本地预览:")
-            print(f"   cd docs && python -m http.server 8000")
-            print(f"   然后在浏览器中访问: http://localhost:8000")
-        
-        print(f"\n📈 统计信息:")
-        print(f"   文章数量: {len(self.articles)}")
-        
-        if os.path.exists(self.docs_dir):
-            file_count = sum([len(files) for _, _, files in os.walk(self.docs_dir)])
-            print(f"   生成文件数: {file_count}")
-            print(f"   输出目录: {self.docs_dir}/")
-        
-        print("\n" + "="*60)
-    
-    def generate_blog(self):
-        """生成博客"""
-        print("="*60)
-        print("🏗️  开始生成VaLog博客")
-        print("="*60)
-        
-        # 检查依赖
-        if not self.check_dependencies():
-            return False
-        
-        # 处理Issues
-        self.process_issues()
-        
-        # 生成base.yaml
-        self.generate_base_yaml()
-        
-        # 生成主页
-        self.generate_home_page()
-        
-        # 生成文章页
-        self.generate_article_pages()
-        
-        # 复制静态资源
-        self.copy_static_resources()
-        
-        # 创建部署文件
-        self.create_deployment_files()
-        
-        print("\n✅ 博客生成完成！")
-        return True
-    
-    def run(self, mode="generate"):
-        """
-        运行主流程
-        
-        参数:
-            mode: 
-                - "generate": 只生成博客（默认）
-                - "auto": 自动部署（用于GitHub Actions）
-                - "manual": 显示部署说明
-        """
-        # 生成博客
-        success = self.generate_blog()
-        
-        if not success:
-            return
-        
-        # 根据模式执行部署
-        if mode == "auto":
-            # 自动部署（GitHub Actions）
-            self.auto_deploy()
-        elif mode == "manual":
-            # 显示手动部署说明
-            self.manual_deploy_instructions()
-        else:
-            # 只生成，显示基本信息
-            self.show_deployment_info()
+        # 4. 渲染首页
+        with open(HOME_TEMPLATE, 'r', encoding='utf-8') as f:
+            # 预处理：将静态占位符替换为 Jinja2 变量
+            home_html = f.read().replace('src="Url"', 'src="{{ config.me.avatar }}"')
+            home_html = home_html.replace('VaLog', '{{ config.blog.title }}')
+            home_html = home_html.replace('Introduction', '{{ config.blog.description }}')
+            home_tpl = Template(home_html)
 
-def main():
-    """主函数"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(
-        description="VaLog - 基于GitHub Issues的静态博客生成器",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-示例:
-  python VaLog_fixed.py                     # 只生成博客
-  python VaLog_fixed.py --mode auto        # 生成并准备自动部署
-  python VaLog_fixed.py --mode manual      # 生成并显示部署说明
-        """
-    )
-    
-    parser.add_argument(
-        "--mode", 
-        choices=["generate", "auto", "manual"], 
-        default="generate",
-        help="运行模式: generate(只生成), auto(自动部署), manual(显示部署说明)"
-    )
-    
-    args = parser.parse_args()
-    
-    print("🎯 VaLog博客生成器启动(修复版)")
-    print(f"📂 配置文件: config.yml")
-    print(f"🚀 运行模式: {args.mode}")
-    
-    # 创建生成器实例
-    generator = VaLogGenerator("config.yml")
-    
-    # 运行生成器
-    generator.run(mode=args.mode)
+        final_home = home_tpl.render(
+            articles=articles,
+            specials=specials,
+            menu_items=final_menu,
+            config=self.config
+        )
+        
+        with open(f"{OUTPUT_DIR}/index.html", 'w', encoding='utf-8') as f:
+            f.write(final_home)
+
+        print(f"✅ 生成成功！共 {len(articles)} 篇文章，{len(specials)} 个特殊卡片。")
 
 if __name__ == "__main__":
-    main()
+    VaLogGenerator().generate()
