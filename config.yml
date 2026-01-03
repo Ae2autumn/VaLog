@@ -1,3 +1,5 @@
+github:
+  repo :"Ae2autumn/VaLog"
 # 基础博客配置
 blog:
   avatar: "https://avatars.githubusercontent.com/u/195545824?v=4"           # 头像文件路径（相对路径）
