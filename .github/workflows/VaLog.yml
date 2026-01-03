@@ -28,7 +28,6 @@ jobs:
       - name: Generate Site
         run: python VaLog.py
         env:
-          # 如果你的仓库是私有的，或者为了防止 API 限制，建议配置此 Token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy to GitHub Pages
