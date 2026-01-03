@@ -1044,14 +1044,13 @@
                   <img src="{{AVATAR_URL}}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                </div>
                <div class="mobile-title-container" id="titleToggle" tabindex="0" role="button" aria-label="收起标题">
-                  <div class="mobile-title">{{BLOG_NAME}}</div>
+                  <div class="mobile-title">{{config.blog.title}}</div>
                </div>
                <button class="menu-btn" id="menuBtn" aria-label="浮动菜单" aria-expanded="false"
                                                                                                                                        aria-controls="floatingMenu">≡</button>
             </div>
             <div class="mobile-top-card">
-               <h2>{{BLOG_NAME}}</h2>
-               <p>{{BLOG_DESCRIPTION}}</p>
+               <p>{{config.blog.desscription}}</p>
             </div>
 
             <div class="floating-menu" id="floatingMenu" role="menu" aria-hidden="true">
