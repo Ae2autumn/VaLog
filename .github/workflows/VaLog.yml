@@ -1,37 +1,48 @@
-name: Deploy VaLog
+name: VaLog Build and Deploy
 
 on:
-  issues:
-    types: [opened, edited, labeled, unlabeled]
   push:
-    branches:
-      - main  # 当你修改模板或配置并推送到 main 时触发
-  workflow_dispatch: # 允许手动触发
+    branches: [ main ]  # 监听main分支推送
+    paths-ignore:
+      - 'docs/**'  # 忽略生成目录的变更
+      - '.github/workflows/VaLog.yml'  # 忽略自身变更
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]  # Issues变化时触发
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许写入仓库内容（部署用）
+      issues: read     # 允许读取Issues数据
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4  # 使用v4版本
+        with:
+          fetch-depth: 0  # 拉取完整历史（用于计算运行天数）
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4  # 使用v4版本
         with:
           python-version: '3.10'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests PyYAML markdown jinja2
+          pip install -r requirements.txt
 
-      - name: Generate Site
-        run: python VaLog.py
+      - name: Run VaLog generator
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub API认证
+          REPO: ${{ github.repository }}  # 仓库名（owner/repo）
+        run: python VaLog.py
 
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: peaceiris/actions-gh-pages@v4  # 部署到gh-pages分支（v3版本≥v4兼容）
         with:
-          folder: docs # 对应 OUTPUT_DIR
-          branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs  # 生成目录
+          publish_branch: gh-pages  # 部署分支
+          force_orphan: true  # 清理历史提交
