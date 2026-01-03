@@ -1,4 +1,4 @@
-name: VaLog Blog CI/CD
+name: VaLog Blog Deployment
 
 on:
   push:
@@ -6,21 +6,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pages: write
       id-token: write
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v2
         with:
           python-version: '3.10'
 
@@ -36,7 +34,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v2
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
@@ -44,5 +42,4 @@ jobs:
           path: ./docs
 
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v1
