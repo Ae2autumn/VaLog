@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """
-VaLog 静态博客生成器 - 修复版
+VaLog 静态博客生成器 - 完整版（包含部署）
 版本: 4.1
-修复问题：
-1. 主页模板替换逻辑错误
-2. 缺失docs目录和文件生成
-3. 模板变量替换不完整
-4. 添加缺失的依赖检查和错误处理
+功能：生成 + 部署 + GitHub Actions 集成
 """
 
 import os
@@ -38,67 +34,16 @@ class VaLogGenerator:
         # 确保必要的目录存在
         self.ensure_directories()
         
-    def ensure_directories(self):
-        """确保必要的目录存在"""
-        os.makedirs(self.docs_dir, exist_ok=True)
-        os.makedirs(os.path.join(self.docs_dir, "article"), exist_ok=True)
-        os.makedirs("O-MD", exist_ok=True)
-        os.makedirs("template", exist_ok=True)
-        
     def load_config(self, path: str) -> Dict:
         """加载配置文件"""
         if not os.path.exists(path):
             print(f"错误: 配置文件 {path} 不存在")
-            # 创建默认配置文件
-            default_config = {
-                "blog": {
-                    "avatar": "https://avatars.githubusercontent.com/u/195545824?v=4",
-                    "name": "VaLog",
-                    "description": "个人技术博客",
-                    "favicon": "static/favicon.ico"
-                },
-                "floating_menu": [
-                    {"tag": "about", "display": "关于"},
-                    {"tag": "contact", "display": "联系"}
-                ],
-                "special": {
-                    "top": False,
-                    "view": {
-                        "RF_Information": "备案信息文本",
-                        "RF_Link": "https://beian.miit.gov.cn",
-                        "Copyright": "© 2023 VaLog 版权所有",
-                        "C_Link": "https://github.com",
-                        "Total_time": "2023.01.01",
-                        "Others": "其他说明文本"
-                    }
-                },
-                "theme": {
-                    "mode": "dark",
-                    "primary_color": "#e74c3c",
-                    "dark_bg": "#121212",
-                    "light_bg": "#f5f7fa"
-                }
-            }
-            
-            with open(path, 'w', encoding='utf-8') as f:
-                yaml.dump(default_config, f, allow_unicode=True, default_flow_style=False)
-            print(f"已创建默认配置文件 {path}")
-            return default_config
+            sys.exit(1)
             
         with open(path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
             
         return config
-    
-    def check_dependencies(self):
-        """检查必要的依赖"""
-        try:
-            import markdown
-            return True
-        except ImportError:
-            print("错误: 缺少必要依赖")
-            print("请运行: pip install markdown pyyaml requests")
-            return False
     
     def fetch_github_issues(self) -> List[Dict]:
         """获取GitHub Issues"""
@@ -316,62 +261,6 @@ class VaLogGenerator:
         print("base.yaml 生成完成")
         return self.base_data
     
-    def ensure_template_files(self):
-        """确保模板文件存在"""
-        template_dir = "template"
-        os.makedirs(template_dir, exist_ok=True)
-        
-        # 检查并创建home.html模板
-        home_template = os.path.join(template_dir, "home.html")
-        if not os.path.exists(home_template):
-            print("警告: home.html模板不存在，使用默认模板")
-            # 这里可以创建默认模板，但根据要求，我们需要完整的代码
-            # 由于home.html内容太长，我们假设用户已提供
-            
-        # 检查并创建article.html模板
-        article_template = os.path.join(template_dir, "article.html")
-        if not os.path.exists(article_template):
-            print("创建默认article.html模板")
-            default_article_template = """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ article.title }} - {{ blog.name }}</title>
-    <link rel="icon" href="{{ blog.favicon }}">
-    <style>
-        /* 基本样式 */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { margin-bottom: 30px; }
-        .article-title { font-size: 2em; margin-bottom: 10px; }
-        .article-meta { color: #666; margin-bottom: 20px; }
-        .article-content { font-size: 1.1em; }
-        .back-link { display: inline-block; margin-top: 30px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <a href="/" class="back-link">← 返回首页</a>
-        </div>
-        <h1 class="article-title">{{ article.title }}</h1>
-        <div class="article-meta">
-            <span>{{ article.date }}</span>
-            {% for tag in article.tags %}
-            <span class="tag">{{ tag }}</span>
-            {% endfor %}
-        </div>
-        <div class="article-content">
-            {{ article.content|safe }}
-        </div>
-    </div>
-</body>
-</html>"""
-            with open(article_template, 'w', encoding='utf-8') as f:
-                f.write(default_article_template)
-    
     def generate_home_page(self):
         """生成主页"""
         self.ensure_template_files()
@@ -533,10 +422,82 @@ const menuItems = {menu_items_json};"""
             f.write(f"- **版本**: VaLog 4.1\n")
         print("✅ 创建部署信息文件")
     
+    def auto_deploy(self):
+        """自动部署到GitHub Pages"""
+        print("\n" + "="*60)
+        print("🤖 开始自动部署流程")
+        print("="*60)
+        
+        # 检查是否在GitHub Actions中
+        if os.environ.get('GITHUB_ACTIONS') != 'true':
+            print("⚠️  警告: 不在GitHub Actions环境中")
+            print("自动部署只能在GitHub Actions中运行")
+            self.show_deployment_info()
+            return False
+        
+        print("✅ 检测到GitHub Actions环境")
+        
+        # 配置Git
+        try:
+            subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions"], check=True)
+            subprocess.run(["git", "config", "--global", "user.email", "actions@github.com"], check=True)
+            
+            # 添加、提交和推送更改
+            subprocess.run(["git", "add", "."], check=True)
+            subprocess.run(["git", "commit", "-m", "Auto-deploy VaLog blog"], check=True)
+            subprocess.run(["git", "push"], check=True)
+            
+            print("✅ 更改已推送到GitHub")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Git操作失败: {e}")
+            return False
+        
+        # 显示访问地址
+        if self.github_repo:
+            username = self.github_repo.split('/')[0]
+            repo_name = self.github_repo.split('/')[1]
+            print(f"\n🌐 博客将部署到:")
+            print(f"   https://{username}.github.io/{repo_name}/")
+        
+        print("\n⏳ 等待GitHub Pages部署完成...")
+        print("部署通常需要1-2分钟")
+        
+        return True
+    
+    def manual_deploy_instructions(self):
+        """显示手动部署说明"""
+        print("\n" + "="*60)
+        print("📖 手动部署说明")
+        print("="*60)
+        
+        print("\n1️⃣ 推送代码到GitHub:")
+        print("   git add .")
+        print("   git commit -m 'Update blog'")
+        print("   git push origin main")
+        
+        print("\n2️⃣ 配置GitHub Pages:")
+        print("   a. 访问: https://github.com/你的用户名/你的仓库名/settings/pages")
+        print("   b. 设置Source为'GitHub Actions'")
+        print("      - 或选择'Deploy from a branch'")
+        print("      - Branch: main, Folder: /docs")
+        print("   c. 点击Save")
+        
+        print("\n3️⃣ 等待部署:")
+        print("   - 通常需要1-2分钟")
+        print("   - 刷新页面查看状态")
+        
+        if self.github_repo:
+            username = self.github_repo.split('/')[0]
+            repo_name = self.github_repo.split('/')[1]
+            print(f"\n4️⃣ 访问博客:")
+            print(f"   https://{username}.github.io/{repo_name}/")
+        
+        print("\n" + "="*60)
+    
     def show_deployment_info(self):
         """显示部署信息"""
         print("\n" + "="*60)
-        print("🚀 VaLog 博客部署信息")
+        print("🚀 VaLog博客部署信息")
         print("="*60)
         
         if self.github_repo:
@@ -564,7 +525,7 @@ const menuItems = {menu_items_json};"""
     def generate_blog(self):
         """生成博客"""
         print("="*60)
-        print("🏗️  开始生成 VaLog 博客")
+        print("🏗️  开始生成VaLog博客")
         print("="*60)
         
         # 检查依赖
@@ -599,7 +560,7 @@ const menuItems = {menu_items_json};"""
         参数:
             mode: 
                 - "generate": 只生成博客（默认）
-                - "auto": 自动部署（用于 GitHub Actions）
+                - "auto": 自动部署（用于GitHub Actions）
                 - "manual": 显示部署说明
         """
         # 生成博客
@@ -624,7 +585,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="VaLog - 基于 GitHub Issues 的静态博客生成器",
+        description="VaLog - 基于GitHub Issues的静态博客生成器",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
@@ -643,7 +604,7 @@ def main():
     
     args = parser.parse_args()
     
-    print("🎯 VaLog 博客生成器启动 (修复版)")
+    print("🎯 VaLog博客生成器启动(修复版)")
     print(f"📂 配置文件: config.yml")
     print(f"🚀 运行模式: {args.mode}")
     
