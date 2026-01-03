@@ -2,16 +2,92 @@
 <html lang="zh-CN">
 
 <head>
-   <base href="../">
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>{{ article.title }} - {{ config.blog.title }}</title>
-   <link rel="icon" href="{{ blog.favicon }}">
+   <title>{{ article.title }} - {{ blog.name }}</title>
+   <link rel="icon" href="{{ blog.favicon }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+   <noscript>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   </noscript>
    <style>
       * {
          margin: 0;
          padding: 0;
          box-sizing: border-box;
+      }
+
+      body.dark-mode {
+         background-color: #121212;
+         color: #ffffff;
+      }
+      
+      body.dark-mode .header {
+         border-bottom-color: #333;
+      }
+      
+      body.dark-mode .title {
+         color: #fff;
+      }
+      
+      body.dark-mode .summary {
+         color: #ccc;
+      }
+      
+      body.dark-mode .date {
+         color: #999;
+      }
+      
+      body.dark-mode .tag {
+         background-color: #333;
+         color: #fff;
+      }
+      
+      body.dark-mode h1,
+      body.dark-mode h2,
+      body.dark-mode h3,
+      body.dark-mode h4,
+      body.dark-mode h5,
+      body.dark-mode h6 {
+         border-bottom-color: #333;
+         color: #fff;
+      }
+      
+      body.dark-mode .comments {
+         border-top-color: #333;
+      }
+      
+      body.dark-mode .floating-btn {
+         background-color: #000;
+         color: #fff;
+         box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+      }
+      
+      body.dark-mode .side-menu {
+         background-color: #111;
+         border-color: #333;
+      }
+      
+      body.dark-mode .menu-left {
+         background-color: #111;
+      }
+      
+      body.dark-mode .chapter-item {
+         border-bottom-color: #222;
+         color: #ccc;
+      }
+      
+      body.dark-mode .chapter-item.h2-item {
+         color: #888;
+      }
+      
+      body.dark-mode .menu-right {
+         background-color: #222;
+      }
+      
+      body.dark-mode .close-btn {
+         background-color: #222;
+         color: #fff;
+         border-top-color: #333;
       }
 
       body {
@@ -104,7 +180,6 @@
          transition: border-color 0.5s ease;
       }
 
-      /* 浮动按钮优化 */
       .floating-btn {
          position: fixed;
          bottom: 30px;
@@ -126,7 +201,6 @@
          transition: background-color 0.5s ease, box-shadow 0.5s ease;
       }
 
-      /* 侧边菜单优化 */
       .side-menu {
          position: fixed;
          bottom: 30px;
@@ -279,111 +353,110 @@
          display: block;
       }
 
-      /* 日间模式样式 */
-      body.light-theme {
+      body.light-mode {
          background-color: #fff;
          color: #000;
       }
 
-      body.light-theme .header {
+      body.light-mode .header {
          border-bottom-color: #ddd;
       }
 
-      body.light-theme .title {
+      body.light-mode .title {
          color: #000;
       }
 
-      body.light-theme .summary {
+      body.light-mode .summary {
          color: #666;
       }
 
-      body.light-theme .date {
+      body.light-mode .date {
          color: #777;
       }
 
-      body.light-theme .tag {
+      body.light-mode .tag {
          background-color: #eee;
          color: #000;
       }
 
-      body.light-theme h1,
-      body.light-theme h2,
-      body.light-theme h3,
-      body.light-theme h4,
-      body.light-theme h5,
-      body.light-theme h6 {
+      body.light-mode h1,
+      body.light-mode h2,
+      body.light-mode h3,
+      body.light-mode h4,
+      body.light-mode h5,
+      body.light-mode h6 {
          border-bottom-color: #ddd;
          color: #000;
       }
 
-      body.light-theme .comments {
+      body.light-mode .comments {
          border-top-color: #ddd;
       }
 
-      body.light-theme .floating-btn {
+      body.light-mode .floating-btn {
          background-color: #fff;
          color: #000;
          box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
       }
 
-      body.light-theme .side-menu {
+      body.light-mode .side-menu {
          background-color: #fff;
          border-color: #ddd;
          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       }
 
-      body.light-theme .menu-left {
+      body.light-mode .menu-left {
          background-color: #fff;
       }
 
-      body.light-theme .chapter-item {
+      body.light-mode .chapter-item {
          border-bottom-color: #eee;
          color: #333;
       }
 
-      body.light-theme .chapter-item.h2-item {
+      body.light-mode .chapter-item.h2-item {
          color: #666;
       }
 
-      body.light-theme .chapter-item:hover {
+      body.light-mode .chapter-item:hover {
          color: #f00;
       }
 
-      body.light-theme .menu-right {
+      body.light-mode .menu-right {
          background-color: #f5f5f5;
       }
 
-      body.light-theme .menu-btn {
+      body.light-mode .menu-btn {
          color: #000;
       }
 
-      body.light-theme .menu-btn:hover {
+      body.light-mode .menu-btn:hover {
          color: #f00;
          background-color: rgba(255, 0, 0, 0.1);
       }
 
-      body.light-theme .close-btn {
+      body.light-mode .close-btn {
          background-color: #f5f5f5;
          color: #000;
          border-top-color: #ddd;
       }
 
-      body.light-theme .close-btn:hover {
+      body.light-mode .close-btn:hover {
          background-color: #d00;
          color: #fff;
       }
 
-      body.light-theme .menu-mask {
+      body.light-mode .menu-mask {
          background-color: rgba(0, 0, 0, 0.3);
       }
    </style>
 </head>
 
-<body>
+<body class="{% if blog.theme.mode == 'light' %}light-mode{% else %}dark-mode{% endif %}">
    <div class="header">
-      <h1 class="title">{{ article.title }}</h1>
-      <p class="summary">{{ article.summary[0] }}</p>
-      <div class="date">{{ article.date }}</div>
+      <h1 class="title">{{ article.title | default('文章标题') }}</h1>
+      <p class="summary">{{ article.summary }}</p>
+      <div class="date">{{ article.date | default('发布日期') }}</div>
       <div class="tags">
          {% for tag in article.tags %}
          <span class="tag">{{ tag }}</span>
@@ -392,11 +465,10 @@
    </div>
 
    <div class="content">
-      {{ article.content_html | safe }}
+      {{ article.content | safe | default('') }}
    </div>
 
    <div class="comments">
-      <!-- 评论区预留 -->
    </div>
 
    <button class="floating-btn" id="menuToggle" style="color: #fff">☰</button>
@@ -418,7 +490,6 @@
    </div>
 
    <script>
-      // 获取DOM元素
       const menuToggle = document.getElementById('menuToggle');
       const sideMenu = document.getElementById('sideMenu');
       const menuMask = document.getElementById('menuMask');
@@ -428,55 +499,42 @@
       const toTopBtn = document.getElementById('toTopBtn');
       const chapterList = document.getElementById('chapterList');
       
-      // 主题切换功能
+      document.querySelectorAll('h1, h2').forEach((el, index) => {
+         el.id = `heading-${index}`;
+      });
+      
       function applyTheme() {
-         const theme = localStorage.getItem('theme');
+         const configTheme = "{{ blog.theme.mode }}";
+         const theme = configTheme || 'dark';
          if (theme === 'light') {
-            document.body.classList.add('light-theme');
+            document.body.classList.add('light-mode');
          } else {
-            document.body.classList.remove('light-theme');
+            document.body.classList.remove('light-mode');
          }
       }
       
-      // 监听storage事件，当其他页面修改了localStorage时更新主题
-      window.addEventListener('storage', function(e) {
-         if (e.key === 'theme') {
-            applyTheme();
-         }
-      });
-      
-      // 初始应用主题
       applyTheme();
       
-      // 获取所有h1和h2标签，但排除第一个h1（文章标题）
       const h1Elements = Array.from(document.querySelectorAll('h1')).slice(1);
       const h2Elements = Array.from(document.querySelectorAll('h2'));
-      
-      // 合并并排序章节
-      const allHeadings = [...h1Elements, ...h2Elements].sort((a, b) => {
-         return a.offsetTop - b.offsetTop;
-      });
+      const allHeadings = [...h1Elements, ...h2Elements].sort((a, b) => a.offsetTop - b.offsetTop);
       
       allHeadings.forEach((heading) => {
          const listItem = document.createElement('div');
          const isH2 = heading.tagName === 'H2';
-         
          listItem.className = isH2 ? 'chapter-item h2-item' : 'chapter-item h1-item';
          listItem.textContent = heading.textContent;
          listItem.dataset.id = heading.id;
-         
-         listItem.addEventListener('click', () => {
-            heading.scrollIntoView({ 
-               behavior: 'smooth',
-               block: 'start'
-            });
+         listItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
             closeMenu();
          });
-         
          chapterList.appendChild(listItem);
       });
       
-      menuToggle.addEventListener('click', () => {
+      menuToggle.addEventListener('click', (e) => {
+         e.stopPropagation();
          sideMenu.classList.add('active');
          menuMask.classList.add('active');
          menuToggle.style.display = 'none';
@@ -488,54 +546,50 @@
          menuToggle.style.display = 'flex';
       }
       
-      closeBtn.addEventListener('click', closeMenu);
-      menuMask.addEventListener('click', closeMenu);
-      
-      toBottomBtn.addEventListener('click', () => {
-         window.scrollTo({
-            top: document.body.scrollHeight,
-            behavior: 'smooth'
-         });
+      closeBtn.addEventListener('click', (e) => {
+         e.stopPropagation();
          closeMenu();
       });
       
-      middleBtn.addEventListener('click', () => {
-         window.scrollTo({
-            top: document.body.scrollHeight / 2,
-            behavior: 'smooth'
-         });
+      menuMask.addEventListener('click', (e) => {
+         e.stopPropagation();
          closeMenu();
       });
       
-      toTopBtn.addEventListener('click', () => {
-         window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-         });
+      sideMenu.addEventListener('click', (e) => {
+         e.stopPropagation();
+      });
+      
+      toBottomBtn.addEventListener('click', (e) => {
+         e.stopPropagation();
+         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
          closeMenu();
       });
       
-      // 更新按钮背景颜色基于滚动进度
+      middleBtn.addEventListener('click', (e) => {
+         e.stopPropagation();
+         window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' });
+         closeMenu();
+      });
+      
+      toTopBtn.addEventListener('click', (e) => {
+         e.stopPropagation();
+         window.scrollTo({ top: 0, behavior: 'smooth' });
+         closeMenu();
+      });
+      
       function updateProgress() {
          const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
          const scrollPosition = window.scrollY;
          const scrollPercent = Math.min(scrollPosition / scrollHeight, 1);
-         
-         // 计算颜色值：从黑色(#000000)过渡到红色(#ff0000)
          const redValue = Math.floor(scrollPercent * 255);
          const color = `rgb(${redValue}, 0, 0)`;
-         
-         // 设置按钮背景色
          menuToggle.style.backgroundColor = color;
-         
-         // 更新阴影颜色
          menuToggle.style.boxShadow = `0 4px 12px rgba(${redValue}, 0, 0, 0.3)`;
       }
       
       window.addEventListener('scroll', updateProgress, { passive: true });
       window.addEventListener('resize', updateProgress, { passive: true });
-      
-      // 初始更新
       updateProgress();
    </script>
 </body>
