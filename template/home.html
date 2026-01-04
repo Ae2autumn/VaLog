@@ -1096,163 +1096,163 @@
 
    <script>
       // ==================== 数据注入点 (由生成引擎替换) ====================
-    const blogData = {
+      const blogData = {
         articles: {{ ARTICLES_JSON }},
         specials: {{ SPECIALS_JSON }}
-    };
-    const menuItemsData = {{ MENU_ITEMS_JSON }};
-    const blogConfig = {
+      };
+      const menuItemsData = {{ MENU_ITEMS_JSON }};
+      const blogConfig = {
         themeColor: "{{ PRIMARY_COLOR }}",
         runDate: "{{ TOTAL_TIME }}"
-    };
-
-    // ==================== 状态管理 ====================
-    const SEARCH_TYPES = { TITLE: 'title', TAG: 'tag', CONTENT: 'content' };
-    const state = {
+      };
+   
+      // ==================== 状态管理 ====================
+      const SEARCH_TYPES = { TITLE: 'title', TAG: 'tag', CONTENT: 'content' };
+      const state = {
         isSearchMode: false,
         currentArticles: [],
         searchType: SEARCH_TYPES.TITLE
-    };
-
-    // ==================== 核心逻辑 ====================
-
-    // 规格 4.4: 仅文本模式触发条件
-    function shouldShowOnlyContent(special) {
+      };
+   
+      // ==================== 核心逻辑 ====================
+   
+      // 规格 4.4: 仅文本模式触发条件
+      function shouldShowOnlyContent(special) {
         const hasTitle = special.title && special.title.trim() !== '';
         const hasTags = special.tags && special.tags.length > 0;
         const hasContent = special.content && special.content.length > 0;
         // 只有内容，没有标题和标签时触发
         return hasContent && !hasTitle && !hasTags;
-    }
-
-    function renderArticles(articles = blogData.articles, isSearchMode = false) {
+      }
+   
+      function renderArticles(articles = blogData.articles, isSearchMode = false) {
         const wrapper = document.getElementById('mobileCardsWrapper');
         wrapper.innerHTML = '';
         
         // 按日期倒序
         const sorted = [...articles].sort((a, b) => new Date(b.date) - new Date(a.date));
-
+   
         sorted.forEach((article, index) => {
-            const card = document.createElement('article');
-            card.className = 'rectangle-card';
-            // 规格 3.3: 默认垂直标题为标签第一个
-            const vTitle = article.verticalTitle || (article.tags && article.tags[0]) || 'Blog';
+          const card = document.createElement('article');
+          card.className = 'rectangle-card';
+          // 规格 3.3: 默认垂直标题为标签第一个
+          const vTitle = article.verticalTitle || (article.tags && article.tags[0]) || 'Blog';
+          
+          // 构建标签HTML
+          let tagsHTML = '';
+          if (article.date) {
+            tagsHTML += `<span class="card-tag date-tag">${article.date}</span>`;
+          }
+          if (article.tags && Array.isArray(article.tags)) {
+            tagsHTML += article.tags.map(tag => `<span class="card-tag">${tag}</span>`).join('');
+          }
+          
+          // 构建内容HTML
+          let contentHTML = '';
+          if (article.content && Array.isArray(article.content)) {
+            contentHTML = article.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+          }
+          
+          card.innerHTML = `
+            <div class="vertical-title">${escapeHtml(vTitle)}</div>
+            <div class="card-content-expanded">
+              <div class="card-tags">
+                ${tagsHTML}
+              </div>
+              <div class="card-title-container">
+                <h2>${escapeHtml(article.title)}</h2>
+              </div>
+              <div class="card-content-main">
+                ${contentHTML}
+              </div>
+              <div class="card-footer">
+                <button class="mobile-card-btn" onclick="window.location.href='${escapeHtml(article.url)}'">Read</button>
+              </div>
+            </div>
+          `;
+   
+          // 搜索模式默认展开第一个，普通模式默认展开第二个(索引1)
+          if ((!isSearchMode && index === 1) || (isSearchMode && index === 0)) {
+            setTimeout(() => card.classList.add('active'), 100);
+          }
+   
+          card.addEventListener('click', (e) => {
+            if (e.target.closest('.mobile-card-btn')) return;
+            document.querySelectorAll('.rectangle-card').forEach(c => c !== card && c.classList.remove('active'));
+            card.classList.toggle('active');
+          });
+          wrapper.appendChild(card);
+        });
+      }
+   
+      function renderSpecialCards() {
+        const container = document.getElementById('specialCardsContainer');
+        const specialSection = document.getElementById('specialCard');
+        container.innerHTML = '';
+   
+        if (!blogData.specials || blogData.specials.length === 0) {
+          specialSection.style.display = 'none';
+          return;
+        }
+   
+        blogData.specials.forEach(special => {
+          const item = document.createElement('div');
+          
+          if (shouldShowOnlyContent(special)) {
+            // 仅文本模式
+            specialSection.classList.add('only-content', 'expanded');
+            item.className = 'special-card-item-content-simple';
+            
+            // 构建纯文本内容
+            let contentHTML = '';
+            if (special.content && Array.isArray(special.content)) {
+              contentHTML = special.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+            }
+            item.innerHTML = contentHTML;
+          } else {
+            // 正常模式
+            item.className = 'special-card-item';
             
             // 构建标签HTML
             let tagsHTML = '';
-            if (article.date) {
-                tagsHTML += `<span class="card-tag date-tag">${article.date}</span>`;
-            }
-            if (article.tags && Array.isArray(article.tags)) {
-                tagsHTML += article.tags.map(tag => `<span class="card-tag">${tag}</span>`).join('');
+            if (special.tags && Array.isArray(special.tags)) {
+              tagsHTML = special.tags.map(t => `<span class="card-tag">${escapeHtml(t)}</span>`).join('');
             }
             
             // 构建内容HTML
             let contentHTML = '';
-            if (article.content && Array.isArray(article.content)) {
-                contentHTML = article.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+            if (special.content && Array.isArray(special.content)) {
+              contentHTML = special.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
             }
             
-            card.innerHTML = `
-                <div class="vertical-title">${escapeHtml(vTitle)}</div>
-                <div class="card-content-expanded">
-                    <div class="card-tags">
-                        ${tagsHTML}
-                    </div>
-                    <div class="card-title-container">
-                        <h2>${escapeHtml(article.title)}</h2>
-                    </div>
-                    <div class="card-content-main">
-                        ${contentHTML}
-                    </div>
-                    <div class="card-footer">
-                        <button class="mobile-card-btn" onclick="window.location.href='${escapeHtml(article.url)}'">Read</button>
-                    </div>
+            // 构建按钮HTML
+            let buttonHTML = '';
+            if (special.url) {
+              buttonHTML = `
+                <div class="special-card-item-footer">
+                  <button class="special-card-btn" onclick="window.open('${escapeHtml(special.url)}', '_blank')">Visit</button>
                 </div>
-            `;
-
-            // 搜索模式默认展开第一个，普通模式默认展开第二个(索引1)
-            if ((!isSearchMode && index === 1) || (isSearchMode && index === 0)) {
-                setTimeout(() => card.classList.add('active'), 100);
+              `;
             }
-
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('.mobile-card-btn')) return;
-                document.querySelectorAll('.rectangle-card').forEach(c => c !== card && c.classList.remove('active'));
-                card.classList.toggle('active');
-            });
-            wrapper.appendChild(card);
-        });
-    }
-
-    function renderSpecialCards() {
-        const container = document.getElementById('specialCardsContainer');
-        const specialSection = document.getElementById('specialCard');
-        container.innerHTML = '';
-
-        if (!blogData.specials || blogData.specials.length === 0) {
-            specialSection.style.display = 'none';
-            return;
-        }
-
-        blogData.specials.forEach(special => {
-            const item = document.createElement('div');
             
-            if (shouldShowOnlyContent(special)) {
-                // 仅文本模式
-                specialSection.classList.add('only-content', 'expanded');
-                item.className = 'special-card-item-content-simple';
-                
-                // 构建纯文本内容
-                let contentHTML = '';
-                if (special.content && Array.isArray(special.content)) {
-                    contentHTML = special.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
-                }
-                item.innerHTML = contentHTML;
-            } else {
-                // 正常模式
-                item.className = 'special-card-item';
-                
-                // 构建标签HTML
-                let tagsHTML = '';
-                if (special.tags && Array.isArray(special.tags)) {
-                    tagsHTML = special.tags.map(t => `<span class="card-tag">${escapeHtml(t)}</span>`).join('');
-                }
-                
-                // 构建内容HTML
-                let contentHTML = '';
-                if (special.content && Array.isArray(special.content)) {
-                    contentHTML = special.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
-                }
-                
-                // 构建按钮HTML
-                let buttonHTML = '';
-                if (special.url) {
-                    buttonHTML = `
-                        <div class="special-card-item-footer">
-                            <button class="special-card-btn" onclick="window.open('${escapeHtml(special.url)}', '_blank')">Visit</button>
-                        </div>
-                    `;
-                }
-                
-                item.innerHTML = `
-                    <div class="special-card-item-content">
-                        <div class="card-tags">
-                            ${tagsHTML}
-                        </div>
-                        <h4>${escapeHtml(special.title || '')}</h4>
-                        <div class="special-card-item-content-main">
-                            ${contentHTML}
-                        </div>
-                        ${buttonHTML}
-                    </div>
-                `;
-            }
-            container.appendChild(item);
+            item.innerHTML = `
+              <div class="special-card-item-content">
+                <div class="card-tags">
+                  ${tagsHTML}
+                </div>
+                <h4>${escapeHtml(special.title || '')}</h4>
+                <div class="special-card-item-content-main">
+                  ${contentHTML}
+                </div>
+                ${buttonHTML}
+              </div>
+            `;
+          }
+          container.appendChild(item);
         });
-    }
-
-    function renderMenu() {
+      }
+   
+      function renderMenu() {
         const menuContainer = document.getElementById('menuItems');
         const searchBtn = document.getElementById('searchMenuItem');
         const themeBtn = document.getElementById('darkModeToggle');
@@ -1260,157 +1260,176 @@
         // 保留搜索和主题切换，清空其他的
         menuContainer.innerHTML = '';
         menuContainer.appendChild(searchBtn);
-
+   
         if (menuItemsData && Array.isArray(menuItemsData)) {
-            menuItemsData.forEach(item => {
-                if (!item.url || !item.display) return; // 规格 3.3: url 为 null 不显示
+          menuItemsData.forEach(item => {
+            // 如果item有url，直接使用
+            if (item.url) {
+              const link = document.createElement('a');
+              link.className = 'menu-item';
+              link.href = item.url;
+              link.textContent = item.display;
+              link.onclick = () => closeFloatingMenu();
+              menuContainer.appendChild(link);
+            } 
+            // 如果item有tag，查找对应的文章
+            else if (item.tag) {
+              // 在articles中查找对应tag的文章
+              const matchedArticle = blogData.articles.find(article => 
+                article.tags && article.tags.includes(item.tag)
+              );
+              
+              if (matchedArticle && matchedArticle.url) {
                 const link = document.createElement('a');
                 link.className = 'menu-item';
-                link.href = item.url;
-                link.textContent = item.display;
+                link.href = matchedArticle.url;
+                link.textContent = item.display || item.tag;
                 link.onclick = () => closeFloatingMenu();
                 menuContainer.appendChild(link);
-            });
+              }
+            }
+            // 如果既没有url也没有tag，跳过不显示
+          });
         }
-
+   
         menuContainer.appendChild(themeBtn);
-    }
-
-    // ==================== 辅助函数 ====================
-    function escapeHtml(text) {
+      }
+   
+      // ==================== 辅助函数 ====================
+      function escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-
-    // ==================== 交互事件 ====================
-    function toggleFloatingMenu() {
+      }
+   
+      // ==================== 交互事件 ====================
+      function toggleFloatingMenu() {
         const menu = document.getElementById('floatingMenu');
         const isClosing = menu.classList.contains('active');
         if (isClosing) {
-            menu.classList.add('closing');
-            menu.classList.remove('active');
-            setTimeout(() => menu.classList.remove('closing'), 250);
+          menu.classList.add('closing');
+          menu.classList.remove('active');
+          setTimeout(() => menu.classList.remove('closing'), 250);
         } else {
-            menu.classList.add('active');
+          menu.classList.add('active');
         }
-    }
-
-    function closeFloatingMenu() {
+      }
+   
+      function closeFloatingMenu() {
         const menu = document.getElementById('floatingMenu');
         if(menu.classList.contains('active')) toggleFloatingMenu();
-    }
-
-    function performSearch() {
+      }
+   
+      function performSearch() {
         const input = document.getElementById('searchInput');
         const keyword = input.value.trim().toLowerCase();
         if (!keyword) return;
-
+   
         const filtered = blogData.articles.filter(a => {
-            if (!a) return false;
-            
-            if (state.searchType === SEARCH_TYPES.TITLE) {
-                return a.title && a.title.toLowerCase().includes(keyword);
-            }
-            if (state.searchType === SEARCH_TYPES.TAG) {
-                return a.tags && a.tags.some(t => t && t.toLowerCase().includes(keyword));
-            }
-            if (state.searchType === SEARCH_TYPES.CONTENT) {
-                return a.content && a.content.some(c => c && c.toLowerCase().includes(keyword));
-            }
-            return false;
+          if (!a) return false;
+          
+          if (state.searchType === SEARCH_TYPES.TITLE) {
+            return a.title && a.title.toLowerCase().includes(keyword);
+          }
+          if (state.searchType === SEARCH_TYPES.TAG) {
+            return a.tags && a.tags.some(t => t && t.toLowerCase().includes(keyword));
+          }
+          if (state.searchType === SEARCH_TYPES.CONTENT) {
+            return a.content && a.content.some(c => c && c.toLowerCase().includes(keyword));
+          }
+          return false;
         });
-
+   
         if (filtered.length > 0) {
-            state.isSearchMode = true;
-            renderArticles(filtered, true);
-            document.getElementById('searchOverlay').classList.remove('active');
-            input.value = '';
-            input.placeholder = '输入关键词搜索...';
+          state.isSearchMode = true;
+          renderArticles(filtered, true);
+          document.getElementById('searchOverlay').classList.remove('active');
+          input.value = '';
+          input.placeholder = '输入关键词搜索...';
         } else {
-            input.classList.add('error');
-            setTimeout(() => {
-                input.classList.remove('error');
-                input.placeholder = '未找到相关内容';
-            }, 500);
+          input.classList.add('error');
+          setTimeout(() => {
+            input.classList.remove('error');
+            input.placeholder = '未找到相关内容';
+          }, 500);
         }
-    }
-
-    // ==================== 初始化 ====================
-    document.addEventListener('DOMContentLoaded', () => {
+      }
+   
+      // ==================== 初始化 ====================
+      document.addEventListener('DOMContentLoaded', () => {
         renderArticles();
         renderSpecialCards();
         renderMenu();
-
+   
         // 基础事件绑定
         document.getElementById('menuBtn').addEventListener('click', toggleFloatingMenu);
         document.getElementById('searchMenuItem').addEventListener('click', () => {
-            document.getElementById('searchOverlay').classList.add('active');
-            document.getElementById('searchInput').focus();
-            closeFloatingMenu();
+          document.getElementById('searchOverlay').classList.add('active');
+          document.getElementById('searchInput').focus();
+          closeFloatingMenu();
         });
         document.getElementById('darkModeToggle').addEventListener('click', () => {
-            document.body.classList.toggle('light-mode');
-            document.body.classList.toggle('dark-mode');
-            const isLight = document.body.classList.contains('light-mode');
-            document.getElementById('darkModeToggle').textContent = isLight ? '夜间模式' : '日间模式';
-            closeFloatingMenu();
+          document.body.classList.toggle('light-mode');
+          document.body.classList.toggle('dark-mode');
+          const isLight = document.body.classList.contains('light-mode');
+          document.getElementById('darkModeToggle').textContent = isLight ? '夜间模式' : '日间模式';
+          closeFloatingMenu();
         });
         document.getElementById('titleToggle').addEventListener('click', () => {
-            if (state.isSearchMode) {
-                state.isSearchMode = false;
-                renderArticles();
-            } else {
-                document.getElementById('mobileTopSection').classList.toggle('expanded');
-                document.getElementById('mobileTopSection').classList.toggle('collapsed');
-            }
+          if (state.isSearchMode) {
+            state.isSearchMode = false;
+            renderArticles();
+          } else {
+            document.getElementById('mobileTopSection').classList.toggle('expanded');
+            document.getElementById('mobileTopSection').classList.toggle('collapsed');
+          }
         });
         
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
+          if (e.key === 'Enter') {
+            performSearch();
+          }
         });
         
         // 点击外部关闭
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#floatingMenu') && !e.target.closest('#menuBtn')) {
-                closeFloatingMenu();
-            }
-            if (e.target.id === 'searchOverlay') {
-                e.target.classList.remove('active');
-                const input = document.getElementById('searchInput');
-                input.value = '';
-                input.placeholder = '输入关键词搜索...';
-            }
+          if (!e.target.closest('#floatingMenu') && !e.target.closest('#menuBtn')) {
+            closeFloatingMenu();
+          }
+          if (e.target.id === 'searchOverlay') {
+            e.target.classList.remove('active');
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            input.placeholder = '输入关键词搜索...';
+          }
         });
-
+   
         // 搜索类型切换
         document.querySelectorAll('.search-option').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.search-option').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                state.searchType = btn.dataset.type;
-            });
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.search-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.searchType = btn.dataset.type;
+          });
         });
-
+   
         // Special Header 点击
         const specialHeader = document.querySelector('.special-card-header');
         if (specialHeader) {
-            specialHeader.addEventListener('click', () => {
-                const card = document.getElementById('specialCard');
-                if (card && !card.classList.contains('only-content')) {
-                    card.classList.toggle('expanded');
-                }
-            });
+          specialHeader.addEventListener('click', () => {
+            const card = document.getElementById('specialCard');
+            if (card && !card.classList.contains('only-content')) {
+              card.classList.toggle('expanded');
+            }
+          });
         }
-    });
-    
-    // 设置主题颜色
-    if (blogConfig.themeColor) {
+      });
+      
+      // 设置主题颜色
+      if (blogConfig.themeColor) {
         document.documentElement.style.setProperty('--primary-color', blogConfig.themeColor);
-    }
+      }
    </script>
 </body>
 
