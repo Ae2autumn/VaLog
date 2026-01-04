@@ -188,7 +188,7 @@ class VaLogGenerator:
                 metadata = self.extract_metadata_and_body(body)
                 
                 # 垂直标题优先级：元数据中的垂直标题 > 文章标题 > "Blog"
-                vertical_title = metadata["vertical_title"] or issue['title'] or "Blog"
+                vertical_title = metadata["vertical_title"] or issue['title'] or "ABlog"
                 
                 article_data = {
                     "id": iid,
@@ -353,6 +353,7 @@ class VaLogGenerator:
             
             context = {
                 "BLOG_NAME": self.config.get('blog', {}).get('name', 'VaLog'),
+                "SPECIAL_NAME": self.config.get('blog', {}).get('sname', 'Special'),
                 "BLOG_DESCRIPTION": self.config.get('blog', {}).get('description', ''),
                 "BLOG_AVATAR": self.config.get('blog', {}).get('avatar', ''),
                 "BLOG_FAVICON": self.config.get('blog', {}).get('favicon', ''),
