@@ -20,7 +20,7 @@ special:
     RF_Link: "https://beian.miit.gov.cn"
     Copyright: "© 2023 VaLog 版权所有"
     C_Link: "https://github.com"
-    Total_time: "2023.01.01"            # 格式: yyyy.mm.dd，自动计算运行天数
+    Total_time: "2026.01.01"            # 格式: yyyy.mm.dd，自动计算运行天数
     Others: "其他说明文本"
 
 # 主题配置（**修正**）
