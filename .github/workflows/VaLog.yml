@@ -11,18 +11,20 @@ on:
       - 'VaLog.py'
   workflow_dispatch:
 
+# 设置 GITHUB_TOKEN 的权限，以允许部署到 GitHub Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # 必须开启：允许 Action 把文件推回你的仓库
-      issues: read
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取完整历史以确保 Git 提交正常
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -37,22 +39,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-        run: python VaLog.py
+        run: |
+          python VaLog.py
+          # 必须创建 .nojekyll，防止 GitHub 忽略下划线开头的文件夹
+          touch docs/.nojekyll
 
-      - name: Sync Data Back to Repo
-        # 这一步非常重要：它把增量更新的 json 和生成的 base.yaml 同步回 main 分支
+      # 步骤 A: 将生成的数据同步回 main 分支（可选，如果你想保留缓存数据）
+      - name: Sync Data Back to Main
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add O-MD/ base.yaml docs/
-          # 如果没有变化，commit 会跳过而不报错
-          git commit -m "docs: 自动更新博客内容与缓存数据 [skip ci]" || echo "No changes to commit"
-          git push origin main
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: 自动更新内容 [skip ci]"
+            git push origin main
+          fi
 
-      - name: Deploy to GitHub Pages
-        # 依然保持部署到 gh-pages 分支，用于网站展示
-        uses: peaceiris/actions-gh-pages@v3
+      # 步骤 B: 核心部署动作 - 上传生成的静态文件
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          publish_branch: gh-pages
+          path: ./docs
+
+      # 步骤 C: 核心部署动作 - 执行 Pages 发布
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
