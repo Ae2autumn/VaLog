@@ -1,4 +1,4 @@
-1<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -1140,14 +1140,14 @@
                     <div class="vertical-title">{{ vTitle }}</div>
                     <div class="card-content-expanded">
                         <div class="card-tags">
-                            {{ article.date ? `<span class="card-tag date-tag">{{ article.date}</span>` : ''}
-                            {{ article.tags.map(tag => `<span class="card-tag">{{ tag}</span>`).join('')}
+                            {{ article.date ? `<span class="card-tag date-tag">{{ article.date }}</span>` : '' }}
+                            {{ article.tags.map(tag => `<span class="card-tag">{{ tag }}</span>`).join('') }}
                         </div>
                         <div class="card-title-container">
-                            <h2>{{ article.title}</h2>
+                            <h2>{{ article.title }}</h2>
                         </div>
                         <div class="card-content-main">
-                            {{ article.content.map(p => `<p>{{ p}</p>`).join('')}
+                            {{ article.content.map(p => `<p>{{ p}</p>`).join('') }}
                         </div>
                         <div class="card-footer">
                             <button class="mobile-card-btn" onclick="window.location.href='{{ article.url}'">Read</button>
