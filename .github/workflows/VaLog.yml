@@ -1,48 +1,58 @@
-name: VaLog Build and Deploy
+name: VaLog Auto Build
 
 on:
-  push:
-    branches: [ main ]  # 监听main分支推送
-    paths-ignore:
-      - 'docs/**'  # 忽略生成目录的变更
-      - '.github/workflows/VaLog.yml'  # 忽略自身变更
   issues:
-    types: [opened, edited, closed, reopened, labeled, unlabeled]  # Issues变化时触发
-  workflow_dispatch:  # 允许手动触发
+    types: [opened, edited, deleted, labeled, unlabeled]
+  push:
+    branches: [ main ]
+    paths:
+      - 'config.yml'
+      - 'template/**'
+      - 'VaLog.py'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 允许写入仓库内容（部署用）
-      issues: read     # 允许读取Issues数据
+      contents: write  # 必须开启：允许 Action 把文件推回你的仓库
+      issues: read
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4  # 使用v4版本
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 拉取完整历史（用于计算运行天数）
+          fetch-depth: 0 # 获取完整历史以确保 Git 提交正常
 
       - name: Set up Python
-        uses: actions/setup-python@v4  # 使用v4版本
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pyyaml requests markdown jinja2
 
-      - name: Run VaLog generator
+      - name: Run VaLog Generator
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub API认证
-          REPO: ${{ github.repository }}  # 仓库名（owner/repo）
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: python VaLog.py
 
+      - name: Sync Data Back to Repo
+        # 这一步非常重要：它把增量更新的 json 和生成的 base.yaml 同步回 main 分支
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add O-MD/ base.yaml docs/
+          # 如果没有变化，commit 会跳过而不报错
+          git commit -m "docs: 自动更新博客内容与缓存数据 [skip ci]" || echo "No changes to commit"
+          git push origin main
+
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4  # 部署到gh-pages分支（v3版本≥v4兼容）
+        # 依然保持部署到 gh-pages 分支，用于网站展示
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs  # 生成目录
-          publish_branch: gh-pages  # 部署分支
-          force_orphan: true  # 清理历史提交
+          publish_dir: ./docs
+          publish_branch: gh-pages
