@@ -1,349 +1,58 @@
-name: Deploy VaLog to GitHub Pages
+name: VaLog Auto Build
 
 on:
+  issues:
+    types: [opened, edited, deleted, labeled, unlabeled]
   push:
-    branches: ["main"]
-    # 忽略自动生成的文件，防止无限循环
-    paths-ignore:
-      - 'docs/**'
-      - 'O-MD/**'
-      - 'base.yaml'
-  pull_request:
-    branches: ["main"]
-    paths-ignore:
-      - 'docs/**'
-      - 'O-MD/**'
-      - 'base.yaml'
-  schedule:
-    # 每3天自动运行一次（UTC时间0点）
-    - cron: '0 0 */3 * *'
+    branches: [ main ]
+    paths:
+      - 'config.yml'
+      - 'template/**'
+      - 'VaLog.py'
   workflow_dispatch:
-
-# 设置权限
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write  # 必须开启：允许 Action 把文件推回你的仓库
+      issues: read
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # 获取完整历史以确保 Git 提交正常
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          else
-            pip install PyYAML Jinja2 requests markdown
-            echo "PyYAML>=6.0" > requirements.txt
-            echo "Jinja2>=3.1.0" >> requirements.txt
-            echo "requests>=2.31.0" >> requirements.txt
-            echo "markdown>=3.5.0" >> requirements.txt
-          fi
+          pip install pyyaml requests markdown jinja2
 
-      - name: Check project structure
-        run: |
-          echo "检查项目结构..."
-          echo "当前目录内容:"
-          ls -la
-          echo ""
-          echo "Python文件:"
-          find . -name "*.py" | head -10
-          echo ""
-          echo "模板文件:"
-          find . -name "*.html" | head -10
-          
-          # 检查主脚本
-          if [ -f "main.py" ]; then
-            echo "✅ 找到 main.py"
-            MAIN_SCRIPT="main.py"
-          elif [ -f "generate.py" ]; then
-            echo "✅ 找到 generate.py"
-            MAIN_SCRIPT="generate.py"
-          else
-            echo "❌ 错误: 找不到生成脚本 (main.py 或 generate.py)"
-            exit 1
-          fi
-
-      - name: Check template files
-        run: |
-          echo "检查模板文件..."
-          if [ ! -d "template" ]; then
-            echo "❌ 错误: template 目录不存在"
-            exit 1
-          fi
-          if [ ! -f "template/home.html" ]; then
-            echo "❌ 错误: template/home.html 不存在"
-            exit 1
-          fi
-          if [ ! -f "template/article.html" ]; then
-            echo "❌ 错误: template/article.html 不存在"
-            exit 1
-          fi
-          echo "✅ 模板文件检查通过"
-
-      - name: Check config file
-        run: |
-          echo "检查配置文件..."
-          if [ ! -f "config.yml" ]; then
-            echo "⚠️ 警告: config.yml 不存在，创建默认配置"
-            cat > config.yml << 'EOF'
-blog:
-  avatar: "https://avatars.githubusercontent.com/u/195545824?v=4"
-  name: "VaLog"
-  description: "个人技术博客"
-  favicon: "static/favicon.ico"
-
-floating_menu:
-  - tag: "about"
-    display: "关于"
-  - tag: "contact"
-    display: "联系"
-
-special:
-  top: true
-  view:
-    RF_Information: "备案信息文本"
-    RF_Link: "https://beian.miit.gov.cn"
-    Copyright: "© 2023 VaLog 版权所有"
-    C_Link: "https://github.com"
-    Total_time: "2026.01.01"
-    Others: "其他说明文本"
-
-theme:
-  mode: "light"
-  primary_color: "#e74c3c"
-EOF
-          else
-            echo "✅ 配置文件存在"
-            cat config.yml
-          fi
-
-      - name: Create necessary directories
-        run: |
-          echo "创建必要的目录..."
-          mkdir -p docs/article
-          mkdir -p O-MD
-          mkdir -p template
-          echo "✅ 目录结构创建完成"
-
-      - name: Run VaLog Generator (with debug)
-        id: generate
+      - name: Run VaLog Generator
         env:
-          REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python VaLog.py
+
+      - name: Sync Data Back to Repo
+        # 这一步非常重要：它把增量更新的 json 和生成的 base.yaml 同步回 main 分支
         run: |
-          echo "运行静态网站生成器..."
-          echo "仓库: $REPO"
-          echo "环境变量检查:"
-          echo "REPO: $REPO"
-          echo "GITHUB_TOKEN: 已设置 $(if [ -n "$GITHUB_TOKEN" ]; then echo "✅"; else echo "❌"; fi)"
-          
-          # 确定主脚本
-          if [ -f "main.py" ]; then
-            MAIN_SCRIPT="main.py"
-          elif [ -f "generate.py" ]; then
-            MAIN_SCRIPT="generate.py"
-          else
-            echo "❌ 错误: 找不到Python脚本"
-            exit 1
-          fi
-          
-          echo "使用脚本: $MAIN_SCRIPT"
-          
-          # 打印脚本内容（前50行）
-          echo "=== 脚本预览（前50行）==="
-          head -50 "$MAIN_SCRIPT"
-          echo "=========================="
-          
-          # 运行Python脚本并捕获详细输出
-          set -x  # 启用详细输出
-          python "$MAIN_SCRIPT"
-          EXIT_CODE=$?
-          set +x  # 关闭详细输出
-          
-          echo "Python脚本退出代码: $EXIT_CODE"
-          
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ Python脚本执行失败"
-            echo "=== 详细调试信息 ==="
-            echo "当前目录:"
-            pwd
-            echo ""
-            echo "文件列表:"
-            ls -la
-            echo ""
-            echo "模板目录:"
-            ls -la template/ 2>/dev/null || echo "模板目录不存在"
-            echo ""
-            echo "Python错误跟踪:"
-            python -c "import traceback; exec(open('$MAIN_SCRIPT').read())" 2>&1 || echo "无法执行Python脚本"
-            exit 1
-          fi
-          
-          echo "✅ Python脚本执行成功"
-
-      - name: Verify generated files
-        run: |
-          echo "验证生成的文件..."
-          
-          # 检查关键文件
-          if [ -f "docs/index.html" ]; then
-            echo "✅ 首页已生成"
-            echo "首页大小: $(wc -c < docs/index.html) bytes"
-            echo "首页前5行:"
-            head -5 docs/index.html
-          else
-            echo "❌ 错误: 未生成首页"
-            exit 1
-          fi
-          
-          if [ -d "docs/article" ]; then
-            ARTICLE_COUNT=$(find docs/article -name "*.html" 2>/dev/null | wc -l)
-            echo "✅ 文章目录存在，文章数量: $ARTICLE_COUNT"
-          fi
-          
-          if [ -d "O-MD" ]; then
-            echo "✅ O-MD 目录存在"
-          fi
-          
-          if [ -f "base.yaml" ]; then
-            echo "✅ base.yaml 已生成"
-          fi
-
-      - name: Create .nojekyll and README
-        run: |
-          echo "创建GitHub Pages配置..."
-          touch docs/.nojekyll
-          cat > docs/README.md << 'EOF'
-# GitHub Pages Source
-
-This directory contains the generated static website for VaLog.
-
-- Generated by: VaLog Generator
-- Source: GitHub Issues
-- Last generated: $(date)
-- DO NOT EDIT: Files in this directory are auto-generated
-
-To update content, modify the GitHub Issues or update config.yml.
-EOF
-          echo "✅ 配置文件创建完成"
-
-      - name: Check for changes
-        id: check_changes
-        run: |
-          echo "检查文件变更..."
-          
-          # 检查是否有任何变更
-          if git status --porcelain | grep -qE 'docs/|O-MD/|base\.yaml'; then
-            echo "✅ 检测到文件变更"
-            echo "变更的文件:"
-            git status --porcelain | grep -E 'docs/|O-MD/|base\.yaml' || true
-            
-            # 计算变更统计
-            echo "CHANGES_EXIST=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ 无文件变更"
-            echo "CHANGES_EXIST=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Setup Pages
-        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './docs'
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add O-MD/ base.yaml docs/
+          # 如果没有变化，commit 会跳过而不报错
+          git commit -m "docs: 自动更新博客内容与缓存数据 [skip ci]" || echo "No changes to commit"
+          git push origin main
 
       - name: Deploy to GitHub Pages
-        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Commit generated files
-        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
-        run: |
-          echo "提交生成的文件..."
-          
-          # 配置git
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # 添加生成的文件
-          git add docs/ O-MD/ base.yaml
-          
-          # 检查是否有可提交的更改
-          if git diff --cached --quiet; then
-            echo "没有可提交的更改"
-            exit 0
-          fi
-          
-          # 创建提交信息
-          ARTICLE_COUNT=$(find docs/article -name "*.html" 2>/dev/null | wc -l)
-          
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            COMMIT_MSG="Auto Run - Scheduled Update ($(date '+%Y-%m-%d')) - $ARTICLE_COUNT articles"
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            COMMIT_MSG="Auto Run - Manual Trigger ($(date '+%Y-%m-%d %H:%M')) - $ARTICLE_COUNT articles"
-          else
-            COMMIT_MSG="Auto Run - Source Update ($(date '+%Y-%m-%d %H:%M')) - $ARTICLE_COUNT articles"
-          fi
-          
-          echo "提交信息: $COMMIT_MSG"
-          
-          # 提交更改
-          git commit -m "$COMMIT_MSG"
-          
-          # 推送到仓库
-          git push origin HEAD:main
-          
-          echo "✅ 已提交更改"
-
-      - name: Deployment summary
-        if: always()
-        run: |
-          echo "=== VaLog 部署总结 ==="
-          echo "时间: $(date)"
-          echo "事件类型: ${{ github.event_name }}"
-          echo "仓库: ${{ github.repository }}"
-          
-          if [ "${{ steps.check_changes.outputs.CHANGES_EXIST }}" = "true" ]; then
-            echo "状态: ✅ 已部署"
-            echo "提交信息: Auto Run"
-            
-            # 文章统计
-            if [ -d "docs/article" ]; then
-              ARTICLE_COUNT=$(find docs/article -name "*.html" 2>/dev/null | wc -l)
-              echo "文章数量: $ARTICLE_COUNT"
-            fi
-            
-            if [ -f "O-MD/articles.json" ]; then
-              CACHE_ENTRIES=$(jq 'length' O-MD/articles.json 2>/dev/null || echo "unknown")
-              echo "缓存条目: $CACHE_ENTRIES"
-            fi
-          else
-            echo "状态: ⚠️ 无变更，跳过部署"
-          fi
-          
-          echo "=== 目录结构 ==="
-          echo "docs/:"
-          find docs -type f -name "*.html" | head -10
-          echo "..."
+        # 依然保持部署到 gh-pages 分支，用于网站展示
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
