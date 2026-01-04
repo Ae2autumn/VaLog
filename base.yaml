@@ -9,25 +9,18 @@ blog:
     primary_color: '#e74c3c'
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
-articles:
-- id: '4'
-  title: 弑杀
-  date: '2026-01-04'
-  tags:
-  - bug
-  content:
-  - 暂无简介
-  url: article/4.html
-  verticalTitle: 弑杀
+articles: []
 specials:
-- id: '5'
-  title: Special
-  date: '2026-01-04'
-  tags:
-  - special
+- id: '0'
+  title: ''
+  date: ''
+  tags: []
   content:
-  - 暂无简介
-  url: article/5.html
+  - Text
+  - ©
+  - '运行天数: 3 天'
+  - 其他说明文本
+  url: ''
   verticalTitle: Special
 floating_menu:
 - tag: about
