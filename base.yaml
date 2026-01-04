@@ -9,15 +9,6 @@ blog:
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
 articles:
-- id: '3'
-  title: 弑杀
-  date: '2026-01-04'
-  tags:
-  - good first issue
-  content:
-  - 链接
-  url: article/3.html
-  verticalTitle: 弑杀
 - id: '2'
   title: Title
   date: '2026-01-03'
