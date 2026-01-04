@@ -27,14 +27,14 @@ class VaLogGenerator:
                     self.cache = json.load(f)
             except: self.cache = {}
 
-        # 首页专用环境：对齐你的 ${VAR}$ 语法
+        # 首页专用环境：精准匹配 ${VAR}$，避开 JS 的 ${var}
         self.home_env = Environment(
             loader=FileSystemLoader(TEMPLATE_DIR),
             variable_start_string='${',
-            variable_end_string='}$',
+            variable_end_string='}$', # 必须包含 $ 符号以区分 JS
             autoescape=False
         )
-        # 文章页专用环境：保持默认 {{ var }}
+        # 文章页专用环境
         self.article_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
     def extract_summary(self, body):
@@ -58,10 +58,8 @@ class VaLogGenerator:
         specials = []
         new_cache = {}
 
-        # 准备数据层级
         blog_cfg = self.config.get('blog', {})
         theme_cfg = self.config.get('theme', {})
-        special_cfg = self.config.get('special', {})
         
         for issue in issues:
             iid = str(issue['number'])
@@ -81,7 +79,6 @@ class VaLogGenerator:
 
             if iid not in self.cache or self.cache[iid] != updated_at:
                 tmpl = self.article_env.get_template("article.html")
-                # 传入合并后的 blog 字典，以适配 article.html 中的 blog.theme.mode
                 rendered = tmpl.render(
                     article={**article_data, "content": self.process_body(body)}, 
                     blog={**blog_cfg, "theme": theme_cfg}
@@ -96,11 +93,14 @@ class VaLogGenerator:
             if "special" in tags:
                 specials.append(article_data)
 
-        # 写回缓存
         with open(OMD_JSON, 'w', encoding='utf-8') as f:
             json.dump(new_cache, f, indent=2, ensure_ascii=False)
 
-        # 生成首页
+        # 生成 base.yaml 以供同步
+        base_data = {"blog": {**blog_cfg, "theme": theme_cfg}, "articles": all_articles, "specials": specials, "floating_menu": self.config.get('floating_menu', [])}
+        with open(BASE_YAML_OUT, 'w', encoding='utf-8') as f:
+            yaml.dump(base_data, f, allow_unicode=True, sort_keys=False)
+
         self.generate_index(all_articles, specials)
 
     def generate_index(self, articles, specials):
@@ -109,20 +109,14 @@ class VaLogGenerator:
         
         tmpl = self.home_env.get_template("home.html")
         
-        # --- 变量对齐区：严格按照你的 home.html 占位符命名 ---
         context = {
-            # 基本信息
             "BLOG_NAME": self.config.get('blog', {}).get('name', 'VaLog'),
             "BLOG_DESCRIPTION": self.config.get('blog', {}).get('description', ''),
             "BLOG_AVATAR": self.config.get('blog', {}).get('avatar', ''),
             "BLOG_FAVICON": self.config.get('blog', {}).get('favicon', ''),
-            
-            # 主题与运行时间
             "THEME_MODE": self.config.get('theme', {}).get('mode', 'dark'),
             "PRIMARY_COLOR": self.config.get('theme', {}).get('primary_color', '#e74c3c'),
             "TOTAL_TIME": self.config.get('special', {}).get('view', {}).get('Total_time', '2023.01.01'),
-            
-            # JSON 数据流
             "ARTICLES_JSON": json.dumps(articles, ensure_ascii=False),
             "SPECIALS_JSON": json.dumps(specials, ensure_ascii=False),
             "MENU_ITEMS_JSON": json.dumps(self.config.get('floating_menu', []), ensure_ascii=False)
