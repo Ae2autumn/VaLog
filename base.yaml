@@ -17,16 +17,16 @@ articles:
   content:
   - 链接
   url: article/3.html
-  verticalTitle: good first issue
+  verticalTitle: 弑杀
 - id: '2'
   title: Title
   date: '2026-01-03'
   tags:
   - bug
   content:
-  - zzz
+  - 暂无简介
   url: article/2.html
-  verticalTitle: bug
+  verticalTitle: zzz
 - id: '1'
   title: Test
   date: '2026-01-02'
@@ -35,10 +35,30 @@ articles:
   content:
   - Test
   url: article/1.html
-  verticalTitle: question
-specials: []
+  verticalTitle: Test
+specials:
+- id: '0'
+  title: ''
+  date: ''
+  tags: []
+  content:
+  - 备案信息文本
+  - © 2023 VaLog 版权所有
+  - '运行天数: 计算中...'
+  - 其他说明文本
+  url: ''
+  verticalTitle: Special
 floating_menu:
 - tag: about
   display: 关于
 - tag: contact
   display: 联系
+special_config:
+  top: true
+  view:
+    RF_Information: 备案信息文本
+    RF_Link: https://beian.miit.gov.cn
+    Copyright: © 2023 VaLog 版权所有
+    C_Link: https://github.com
+    Total_time: 2026.01.01
+    Others: 其他说明文本
