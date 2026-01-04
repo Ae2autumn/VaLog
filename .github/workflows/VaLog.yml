@@ -1,58 +1,230 @@
-name: VaLog Auto Build
+name: Deploy VaLog to GitHub Pages
 
 on:
-  issues:
-    types: [opened, edited, deleted, labeled, unlabeled]
   push:
-    branches: [ main ]
-    paths:
-      - 'config.yml'
-      - 'template/**'
-      - 'VaLog.py'
+    branches: ["main"]
+    # 忽略自动生成的文件，防止无限循环
+    paths-ignore:
+      - 'docs/**'
+      - 'O-MD/**'
+      - 'base.yaml'
+  pull_request:
+    branches: ["main"]
+    paths-ignore:
+      - 'docs/**'
+      - 'O-MD/**'
+      - 'base.yaml'
+  schedule:
+    # 每3天自动运行一次（UTC时间0点）
+    - cron: '0 0 */3 * *'
   workflow_dispatch:
+
+# 设置权限
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # 必须开启：允许 Action 把文件推回你的仓库
-      issues: read
-
+    
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取完整历史以确保 Git 提交正常
+          fetch-depth: 0
+
+      - name: Check for changes
+        id: check
+        run: |
+          # 检查是否有真正的更改（排除自动生成的文件）
+          echo "检查Issues是否有更新..."
+          # 保存当前缓存状态
+          if [ -f "O-MD/articles.json" ]; then
+            cp "O-MD/articles.json" "articles.json.backup"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          pip install pyyaml requests markdown jinja2
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          else
+            pip install PyYAML Jinja2 requests markdown
+            echo "PyYAML>=6.0" > requirements.txt
+            echo "Jinja2>=3.1.0" >> requirements.txt
+            echo "requests>=2.31.0" >> requirements.txt
+            echo "markdown>=3.5.0" >> requirements.txt
+          fi
+
+      - name: Check template files
+        run: |
+          echo "检查模板文件..."
+          if [ ! -f "template/home.html" ]; then
+            echo "❌ 错误: template/home.html 不存在"
+            exit 1
+          fi
+          if [ ! -f "template/article.html" ]; then
+            echo "❌ 错误: template/article.html 不存在"
+            exit 1
+          fi
+          echo "✅ 模板文件检查通过"
 
       - name: Run VaLog Generator
+        id: generate
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-        run: python VaLog.py
-
-      - name: Sync Data Back to Repo
-        # 这一步非常重要：它把增量更新的 json 和生成的 base.yaml 同步回 main 分支
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add O-MD/ base.yaml docs/
-          # 如果没有变化，commit 会跳过而不报错
-          git commit -m "docs: 自动更新博客内容与缓存数据 [skip ci]" || echo "No changes to commit"
-          git push origin main
+          echo "运行静态网站生成器..."
+          echo "仓库: $REPO"
+          
+          # 运行生成器并记录输出
+          python_output=$(python main.py 2>&1)
+          exit_code=$?
+          
+          echo "生成器输出:"
+          echo "$python_output"
+          
+          if [ $exit_code -ne 0 ]; then
+            echo "❌ 生成器执行失败"
+            exit 1
+          fi
+          
+          # 检查是否生成了新文件
+          if [ ! -f "docs/index.html" ]; then
+            echo "❌ 未生成首页"
+            exit 1
+          fi
+          
+          # 检查是否有实际的内容变更
+          changes_detected=false
+          if [ -f "O-MD/articles.json" ] && [ -f "articles.json.backup" ]; then
+            if ! cmp -s "O-MD/articles.json" "articles.json.backup"; then
+              changes_detected=true
+              echo "✅ 检测到文章更新"
+            fi
+          fi
+          
+          # 检查是否有新文章生成
+          article_count=$(find docs/article -name "*.html" 2>/dev/null | wc -l)
+          echo "文章总数: $article_count"
+          
+          # 设置输出变量供后续步骤使用
+          if [ "$changes_detected" = true ] || [ "$article_count" -gt 0 ]; then
+            echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
+          else
+            echo "HAS_CHANGES=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if changes exist
+        id: check_changes
+        run: |
+          # 检查是否有文件变更
+          echo "检查是否有文件变更..."
+          if git diff --name-only HEAD -- docs/ O-MD/ base.yaml | grep -q '.'; then
+            echo "CHANGES_EXIST=true" >> $GITHUB_OUTPUT
+            echo "✅ 检测到文件变更"
+          else
+            echo "CHANGES_EXIST=false" >> $GITHUB_OUTPUT
+            echo "⚠️ 无文件变更"
+          fi
+
+      - name: Setup Pages
+        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './docs'
 
       - name: Deploy to GitHub Pages
-        # 依然保持部署到 gh-pages 分支，用于网站展示
-        uses: peaceiris/actions-gh-pages@v3
+        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          publish_branch: gh-pages
+          retry: 3
+
+      - name: Commit generated files
+        if: steps.check_changes.outputs.CHANGES_EXIST == 'true'
+        run: |
+          echo "提交生成的文件..."
+          
+          # 配置git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 添加生成的文件
+          git add docs/ O-MD/ base.yaml
+          
+          # 检查是否有可提交的更改
+          if git diff --cached --quiet; then
+            echo "没有可提交的更改"
+            exit 0
+          fi
+          
+          # 创建提交信息
+          COMMIT_MSG="Auto Run - $(date '+%Y-%m-%d %H:%M:%S')"
+          
+          # 获取文章数量
+          ARTICLE_COUNT=$(find docs/article -name "*.html" 2>/dev/null | wc -l)
+          if [ "$ARTICLE_COUNT" -gt 0 ]; then
+            COMMIT_MSG="$COMMIT_MSG - $ARTICLE_COUNT articles"
+          fi
+          
+          # 获取更新来源
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            COMMIT_MSG="$COMMIT_MSG [Scheduled]"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            COMMIT_MSG="$COMMIT_MSG [Manual]"
+          else
+            COMMIT_MSG="$COMMIT_MSG [Push]"
+          fi
+          
+          # 提交更改
+          git commit -m "$COMMIT_MSG"
+          
+          # 推送到仓库
+          git push origin HEAD:main
+          
+          echo "✅ 已提交更改: $COMMIT_MSG"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "=== 部署总结 ==="
+          echo "事件: ${{ github.event_name }}"
+          echo "提交: ${{ github.sha }}"
+          echo "分支: ${{ github.ref }}"
+          
+          if [ "${{ steps.check_changes.outputs.CHANGES_EXIST }}" = "true" ]; then
+            echo "状态: ✅ 已部署并提交更改"
+            if [ "${{ steps.deployment.outcome }}" = "success" ]; then
+              echo "Pages: 部署成功"
+            fi
+          else
+            echo "状态: ⚠️ 无文件变更，跳过部署"
+          fi
+          
+          # 显示文章统计
+          if [ -d "docs/article" ]; then
+            ARTICLE_COUNT=$(find docs/article -name "*.html" 2>/dev/null | wc -l)
+            echo "文章数量: $ARTICLE_COUNT"
+          fi
+          
+          if [ -f "O-MD/articles.json" ]; then
+            CACHE_SIZE=$(stat -c%s "O-MD/articles.json" 2>/dev/null || echo "unknown")
+            echo "缓存大小: $CACHE_SIZE bytes"
+          fi
