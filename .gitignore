@@ -165,8 +165,3 @@ Thumbs.db
 # Log files
 *.log
 
-# VaLog specific
-base.yaml
-docs/index.html
-docs/article/
-O-MD/articles.json
