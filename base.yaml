@@ -1,7 +1,7 @@
 blog:
   avatar: https://avatars.githubusercontent.com/u/195545824?v=4
-  name: VaLog
-  description: 个人技术博客
+  name: Title
+  description: Des.
   favicon: static/favicon.ico
   theme:
     mode: light
@@ -42,8 +42,8 @@ specials:
   date: ''
   tags: []
   content:
-  - 备案信息文本
-  - © 2023 VaLog 版权所有
+  - Text
+  - ©
   - '运行天数: 3 天'
   - 其他说明文本
   url: ''
@@ -56,9 +56,9 @@ floating_menu:
 special_config:
   top: true
   view:
-    RF_Information: 备案信息文本
-    RF_Link: https://beian.miit.gov.cn
-    Copyright: © 2023 VaLog 版权所有
-    C_Link: https://github.com
+    RF_Information: Text
+    RF_Link: Link
+    Copyright: ©
+    C_Link: Link
     Total_time: 2026.01.01
     Others: 其他说明文本
