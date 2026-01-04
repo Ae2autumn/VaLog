@@ -61,7 +61,7 @@ class VaLogGenerator:
         print("Jinja2环境初始化完成")
 
     def extract_metadata_and_body(self, body):
-        """提取摘要、垂直标题并移除元数据行"""
+        """提取摘要、垂直标题并分离正文"""
         if not body:
             return {
                 "summary": ["暂无简介"],
@@ -72,6 +72,7 @@ class VaLogGenerator:
         lines = body.split('\n')
         summary = []
         vertical_title = ""
+        content_lines = []
         
         # 处理第一行元数据（摘要）
         if len(lines) > 0 and lines[0].startswith('!vml-'):
@@ -90,34 +91,32 @@ class VaLogGenerator:
                 vertical_title = match.group(1).strip()
         
         # 从第三行开始是正文（跳过前两行元数据行）
-        content_lines = lines[2:] if len(lines) > 2 else []
+        if len(lines) > 2:
+            content_lines = lines[2:]  # 保留原始行，包含可能的空行
+        else:
+            content_lines = []
         
         return {
             "summary": summary,
             "vertical_title": vertical_title,
-            "body": "\n".join(content_lines).strip()
+            "body": "\n".join(content_lines).strip()  # 保留正文内容
         }
 
     def process_body(self, body):
-        """处理正文，移除元数据行并转换为HTML"""
+        """处理正文，转换为HTML（这里接收的是已经移除了元数据的正文）"""
         if not body:
             return ""
-        
-        # 移除所有以!vml-开头的行（元数据行）
-        lines = body.split('\n')
-        content_lines = [line for line in lines if not line.startswith('!vml-')]
-        processed_body = "\n".join(content_lines)
         
         # 转换Markdown为HTML
         try:
             html_content = markdown.markdown(
-                processed_body, 
+                body, 
                 extensions=['extra', 'fenced_code', 'tables']
             )
             return html_content
         except Exception as e:
             print(f"Markdown转换错误: {e}")
-            return processed_body  # 返回原始文本
+            return body  # 返回原始文本
 
     def run(self):
         print("开始运行生成器...")
@@ -181,7 +180,7 @@ class VaLogGenerator:
                 print(f"处理文章 {i}/{len(issues)}: #{iid} - {issue['title']}")
                 print(f"  标签: {tags}")
                 
-                # 提取元数据和正文
+                # 提取元数据和正文（这里会分离元数据和正文）
                 metadata = self.extract_metadata_and_body(body)
                 
                 # 垂直标题优先级：元数据中的垂直标题 > 文章标题 > "Blog"
@@ -224,11 +223,11 @@ class VaLogGenerator:
                         </html>
                         """
                     else:
-                        # 渲染文章页面
+                        # 渲染文章页面 - 这里metadata['body']已经移除了前两行元数据
                         article_html = tmpl.render(
                             article={
                                 **article_data, 
-                                "content": self.process_body(metadata["body"])
+                                "content": self.process_body(metadata["body"])  # 使用已经移除元数据的正文
                             }, 
                             blog={**blog_cfg, "theme": theme_cfg}
                         )
@@ -239,7 +238,7 @@ class VaLogGenerator:
                         f.write(article_html)
                     print(f"  已生成: {article_path}")
                     
-                    # 备份原始Markdown
+                    # 备份原始Markdown（包含元数据）
                     md_path = os.path.join(OMD_DIR, f"{iid}.md")
                     with open(md_path, "w", encoding="utf-8") as f:
                         f.write(body)
