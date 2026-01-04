@@ -169,6 +169,10 @@ class VaLogGenerator:
         theme_cfg = self.config.get('theme', {})
         special_cfg = self.config.get('special', {})
         
+        # 获取特殊标签配置
+        special_top_enabled = special_cfg.get('top', True)
+        special_tags = self.config.get('special_tags', [])
+        
         print("开始处理文章...")
         for i, issue in enumerate(issues, 1):
             try:
@@ -244,28 +248,38 @@ class VaLogGenerator:
                         f.write(body)
                     print(f"  已备份: {md_path}")
                 
-                # 添加到文章列表
-                all_articles.append(article_data)
-                new_cache[iid] = updated_at
-                
                 # 检查是否为特殊文章
-                special_tags = ['top', 'special']
-                if special_cfg.get('top', True):
-                    special_tags.append('top')
+                is_special = False
                 
-                special_tags.extend(self.config.get('special_tags', []))
+                # 检查配置的特殊标签
+                if special_top_enabled and 'top' in tags:
+                    is_special = True
+                    print(f"  标记为特殊文章 (top标签)")
                 
-                is_special = any(tag in tags for tag in special_tags)
+                # 检查其他特殊标签
+                for tag in special_tags:
+                    if tag in tags:
+                        is_special = True
+                        print(f"  标记为特殊文章 ({tag}标签)")
+                        break
+                
                 if is_special:
+                    # 如果是特殊文章，只添加到specials列表
                     specials.append(article_data)
-                    print(f"  标记为特殊文章")
+                else:
+                    # 如果不是特殊文章，添加到all_articles列表
+                    all_articles.append(article_data)
+                
+                # 更新缓存
+                new_cache[iid] = updated_at
                     
             except Exception as e:
                 print(f"  处理文章时出错: {e}")
                 continue
         
-        print(f"文章处理完成，总计: {len(all_articles)} 篇")
+        print(f"普通文章: {len(all_articles)} 篇")
         print(f"特殊文章: {len(specials)} 篇")
+        print(f"文章处理完成，总计: {len(all_articles) + len(specials)} 篇")
         
         # 保存缓存
         try:
