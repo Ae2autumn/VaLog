@@ -27,22 +27,49 @@ class VaLogGenerator:
                     self.cache = json.load(f)
             except: self.cache = {}
 
-        # 现在统一使用标准的 Jinja2 语法 {{ VAR }}
-        self.home_env = Environment(
-            loader=FileSystemLoader(TEMPLATE_DIR),
-            autoescape=False
-        )
-        # 文章页专用环境
-        self.article_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+        # 统一使用标准的 Jinja2 语法 {{ VAR }}
+        self.env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
-    def extract_summary(self, body):
-        match = re.search(r'^!vml-.*?<span[^>]*>(.*?)</span>', body, re.MULTILINE | re.DOTALL)
-        content = match.group(1).strip() if match else ""
-        return [content] if content else ["暂无简介"]
+    def extract_metadata_and_body(self, body):
+        """提取摘要、垂直标题并移除元数据行"""
+        lines = body.split('\n')
+        summary = []
+        vertical_title = ""
+        content_lines = []
+        
+        # 处理前两行元数据
+        if len(lines) > 0 and lines[0].startswith('!vml-'):
+            # 提取第一行的摘要
+            match = re.search(r'<span[^>]*>(.*?)</span>', lines[0])
+            if match:
+                summary = [match.group(1).strip()]
+            else:
+                summary = ["暂无简介"]
+        else:
+            summary = ["暂无简介"]
+            
+        if len(lines) > 1 and lines[1].startswith('!vml-'):
+            # 提取第二行的垂直标题
+            match = re.search(r'<span[^>]*>(.*?)</span>', lines[1])
+            if match:
+                vertical_title = match.group(1).strip()
+        
+        # 从第三行开始是正文（跳过前两行元数据行）
+        content_lines = lines[2:] if len(lines) > 2 else []
+        
+        return {
+            "summary": summary,
+            "vertical_title": vertical_title,
+            "body": "\n".join(content_lines)
+        }
 
     def process_body(self, body):
-        processed = re.sub(r'!vml-(.+?)(?=\n|$)', lambda m: m.group(1), body)
-        return markdown.markdown(processed, extensions=['extra', 'fenced_code', 'tables'])
+        """处理正文，移除元数据行并转换为HTML"""
+        # 移除所有以!vml-开头的行（元数据行）
+        lines = body.split('\n')
+        content_lines = [line for line in lines if not line.startswith('!vml-')]
+        processed_body = "\n".join(content_lines)
+        return markdown.markdown(processed_body, extensions=['extra', 'fenced_code', 'tables'])
 
     def run(self):
         repo = os.getenv("REPO")
@@ -58,6 +85,22 @@ class VaLogGenerator:
 
         blog_cfg = self.config.get('blog', {})
         theme_cfg = self.config.get('theme', {})
+        special_cfg = self.config.get('special', {})
+        
+        # 获取特殊标签配置（优先级: top > special > 用户自定义）
+        special_tags_config = self.config.get('special_tags', [])
+        special_tags = []
+        
+        # 如果top配置为true，则添加top标签
+        if special_cfg.get('top', True):
+            special_tags.append('top')
+        
+        # 添加special标签
+        special_tags.append('special')
+        
+        # 添加用户自定义标签
+        if special_tags_config:
+            special_tags.extend(special_tags_config)
         
         for issue in issues:
             iid = str(issue['number'])
@@ -65,20 +108,27 @@ class VaLogGenerator:
             body = issue['body'] or ""
             tags = [l['name'] for l in issue['labels']]
             
+            # 提取元数据和正文
+            metadata = self.extract_metadata_and_body(body)
+            
+            # 垂直标题优先级：元数据中的垂直标题 > 文章标题 > "Blog"
+            vertical_title = metadata["vertical_title"] or issue['title'] or "Blog"
+            
             article_data = {
                 "id": iid,
                 "title": issue['title'],
                 "date": issue['created_at'][:10],
                 "tags": tags,
-                "content": self.extract_summary(body),
+                "content": metadata["summary"],  # 主页摘要
                 "url": f"article/{iid}.html",
-                "verticalTitle": tags[0] if tags else "Blog"
+                "verticalTitle": vertical_title
             }
 
             if iid not in self.cache or self.cache[iid] != updated_at:
-                tmpl = self.article_env.get_template("article.html")
+                # 生成文章页 - 使用处理后的正文
+                tmpl = self.env.get_template("article.html")
                 rendered = tmpl.render(
-                    article={**article_data, "content": self.process_body(body)}, 
+                    article={**article_data, "content": self.process_body(metadata["body"])}, 
                     blog={**blog_cfg, "theme": theme_cfg}
                 )
                 with open(os.path.join(ARTICLE_DIR, f"{iid}.html"), "w", encoding="utf-8") as f:
@@ -88,14 +138,48 @@ class VaLogGenerator:
 
             all_articles.append(article_data)
             new_cache[iid] = updated_at
-            if "special" in tags:
+            
+            # 判断是否为特殊文章（检查标签是否包含特殊标签）
+            is_special = False
+            for tag in tags:
+                if tag in special_tags:
+                    is_special = True
+                    break
+            
+            if is_special:
                 specials.append(article_data)
 
         with open(OMD_JSON, 'w', encoding='utf-8') as f:
             json.dump(new_cache, f, indent=2, ensure_ascii=False)
 
+        # 如果special数组为空，使用配置信息填充
+        if not specials and special_cfg.get('view'):
+            view = special_cfg.get('view', {})
+            # 创建默认的特殊文章
+            default_special = {
+                "id": "0",
+                "title": "",
+                "date": "",
+                "tags": [],
+                "content": [
+                    view.get('RF_Information', ''),
+                    view.get('Copyright', ''),
+                    f"运行天数: 计算中...",
+                    view.get('Others', '')
+                ],
+                "url": "",
+                "verticalTitle": "Special"
+            }
+            specials.append(default_special)
+
         # 生成 base.yaml 以供同步
-        base_data = {"blog": {**blog_cfg, "theme": theme_cfg}, "articles": all_articles, "specials": specials, "floating_menu": self.config.get('floating_menu', [])}
+        base_data = {
+            "blog": {**blog_cfg, "theme": theme_cfg}, 
+            "articles": all_articles, 
+            "specials": specials, 
+            "floating_menu": self.config.get('floating_menu', []),
+            "special_config": special_cfg
+        }
         with open(BASE_YAML_OUT, 'w', encoding='utf-8') as f:
             yaml.dump(base_data, f, allow_unicode=True, sort_keys=False)
 
@@ -103,9 +187,11 @@ class VaLogGenerator:
 
     def generate_index(self, articles, specials):
         home_tmpl_path = os.path.join(TEMPLATE_DIR, "home.html")
-        if not os.path.exists(home_tmpl_path): return
+        if not os.path.exists(home_tmpl_path): 
+            print(f"警告: 模板文件 {home_tmpl_path} 不存在")
+            return
         
-        tmpl = self.home_env.get_template("home.html")
+        tmpl = self.env.get_template("home.html")
         
         context = {
             "BLOG_NAME": self.config.get('blog', {}).get('name', 'VaLog'),
@@ -124,6 +210,9 @@ class VaLogGenerator:
         rendered = tmpl.render(**context)
         with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
             f.write(rendered)
+        
+        print(f"已生成首页: {os.path.join(DOCS_DIR, 'index.html')}")
+        print(f"文章总数: {len(articles)}, 特殊文章数: {len(specials)}")
 
 if __name__ == "__main__":
     VaLogGenerator().run()
