@@ -10,15 +10,6 @@ blog:
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
 articles:
-- id: '5'
-  title: Special
-  date: '2026-01-04'
-  tags:
-  - special
-  content:
-  - 暂无简介
-  url: article/5.html
-  verticalTitle: Special
 - id: '4'
   title: 弑杀
   date: '2026-01-04'
@@ -38,6 +29,15 @@ specials:
   - 暂无简介
   url: article/6.html
   verticalTitle: top
+- id: '5'
+  title: Special
+  date: '2026-01-04'
+  tags:
+  - special
+  content:
+  - 暂无简介
+  url: article/5.html
+  verticalTitle: Special
 floating_menu:
 - tag: about
   display: 关于
