@@ -4,7 +4,7 @@ blog:
   description: Des.
   favicon: static/favicon.ico
   theme:
-    mode: light
+    mode: dark
     primary_color: '#e74c3c'
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
