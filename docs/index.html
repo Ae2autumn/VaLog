@@ -4,8 +4,8 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>${BLOG_NAME}$</title>
-   <link rel="icon" href="${BLOG_FAVICON}$" as="style"
+   <title>{{ BLOG_NAME }}</title>
+   <link rel="icon" href="{{ BLOG_FAVICON }}" as="style"
                                                                                                                            onload="this.onload=null;this.rel='stylesheet'">
    <noscript>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1035,21 +1035,21 @@
    </style>
 </head>
 
-<body class="${THEME_MODE}$-mode">
+<body class="{{ THEME_MODE }}-mode">
     <div class="container">
         <div class="mobile-layout">
             <div class="mobile-top-section expanded" id="mobileTopSection">
                 <div class="mobile-top-bar">
                     <div class="avatar" role="img" aria-label="Avatar">
-                        <img src="${BLOG_AVATAR}$" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+                        <img src="{{ BLOG_AVATAR }}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                     </div>
                     <div class="mobile-title-container" id="titleToggle" tabindex="0" role="button" aria-label="Toggle Title">
-                        <div class="mobile-title">${BLOG_NAME}$</div>
+                        <div class="mobile-title">{{ BLOG_NAME }}</div>
                     </div>
                     <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="floatingMenu">≡</button>
                 </div>
                 <div class="mobile-top-card">
-                    <p>${BLOG_DESCRIPTION}$</p>
+                    <p>{{ BLOG_DESCRIPTION }}</p>
                 </div>
 
                 <div class="floating-menu" id="floatingMenu" role="menu" aria-hidden="true">
@@ -1095,13 +1095,13 @@
     <script>
         // ==================== 数据注入点 (由生成引擎替换) ====================
         const blogData = {
-            articles: [{"id": "2", "title": "Title", "date": "2026-01-03", "tags": ["bug"], "summary": "zzz", "url": "article/2.html", "verticalTitle": "bug"}, {"id": "1", "title": "Test", "date": "2026-01-02", "tags": ["question"], "summary": "Test", "url": "article/1.html", "verticalTitle": "question"}],
-            specials: []
+            articles: {{ ARTICLES_JSON }},
+            specials: {{ SPECIALS_JSON }}
         };
-        const menuItemsData = [{"tag": "about", "display": "关于"}, {"tag": "contact", "display": "联系"}];
+        const menuItemsData = {{ MENU_ITEMS_JSON }};
         const blogConfig = {
-            themeColor: "#e74c3c"
-            runDate: "2023.01.01"
+            themeColor: "{{ PRIMARY_COLOR }}"
+            runDate: "{{ TOTAL_TIME }}"
         }
 
         // ==================== 状态管理 ====================
@@ -1137,20 +1137,20 @@
                 const vTitle = article.verticalTitle || (article.tags && article.tags[0]) || 'Blog';
                 
                 card.innerHTML = `
-                    <div class="vertical-title">${vTitle}</div>
+                    <div class="vertical-title">{{ vTitle}</div>
                     <div class="card-content-expanded">
                         <div class="card-tags">
-                            ${article.date ? `<span class="card-tag date-tag">${article.date}</span>` : ''}
-                            ${article.tags.map(tag => `<span class="card-tag">${tag}</span>`).join('')}
+                            {{ article.date ? `<span class="card-tag date-tag">{{ article.date}</span>` : ''}
+                            {{ article.tags.map(tag => `<span class="card-tag">{{ tag}</span>`).join('')}
                         </div>
                         <div class="card-title-container">
-                            <h2>${article.title}</h2>
+                            <h2>{{ article.title}</h2>
                         </div>
                         <div class="card-content-main">
-                            ${article.content.map(p => `<p>${p}</p>`).join('')}
+                            {{ article.content.map(p => `<p>{{ p}</p>`).join('')}
                         </div>
                         <div class="card-footer">
-                            <button class="mobile-card-btn" onclick="window.location.href='${article.url}'">Read</button>
+                            <button class="mobile-card-btn" onclick="window.location.href='{{ article.url}'">Read</button>
                         </div>
                     </div>
                 `;
@@ -1186,22 +1186,22 @@
                     // 仅文本模式
                     specialSection.classList.add('only-content', 'expanded');
                     item.className = 'special-card-item-content-simple';
-                    item.innerHTML = special.content.map(p => `<p>${p}</p>`).join('');
+                    item.innerHTML = special.content.map(p => `<p>{{ p}</p>`).join('');
                 } else {
                     // 正常模式
                     item.className = 'special-card-item';
                     item.innerHTML = `
                         <div class="special-card-item-content">
                             <div class="card-tags">
-                                ${special.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
+                                {{ special.tags.map(t => `<span class="card-tag">{{ t}</span>`).join('')}
                             </div>
-                            <h4>${special.title}</h4>
+                            <h4>{{ special.title}</h4>
                             <div class="special-card-item-content-main">
-                                ${special.content.map(p => `<p>${p}</p>`).join('')}
+                                {{ special.content.map(p => `<p>{{ p}</p>`).join('')}
                             </div>
-                            ${special.url ? `
+                            {{ special.url ? `
                                 <div class="special-card-item-footer">
-                                    <button class="special-card-btn" onclick="window.open('${special.url}', '_blank')">Visit</button>
+                                    <button class="special-card-btn" onclick="window.open('{{ special.url}', '_blank')">Visit</button>
                                 </div>
                             ` : ''}
                         </div>

@@ -9,12 +9,22 @@ blog:
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
 articles:
+- id: '3'
+  title: 弑杀
+  date: '2026-01-04'
+  tags:
+  - good first issue
+  content:
+  - 暂无简介
+  url: article/3.html
+  verticalTitle: good first issue
 - id: '2'
   title: Title
   date: '2026-01-03'
   tags:
   - bug
-  summary: zzz
+  content:
+  - zzz
   url: article/2.html
   verticalTitle: bug
 - id: '1'
@@ -22,7 +32,8 @@ articles:
   date: '2026-01-02'
   tags:
   - question
-  summary: Test
+  content:
+  - Test
   url: article/1.html
   verticalTitle: question
 specials: []
