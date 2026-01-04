@@ -1,7 +1,7 @@
 blog:
   avatar: "https://avatars.githubusercontent.com/u/195545824?v=4"           # 头像文件路径（相对路径）
-  name: "VaLog"                         # 博客名称
-  description: "个人技术博客"            # 博客描述
+  name: "Title"                         # 博客名称
+  description: "Des."            # 博客描述
   favicon: "static/favicon.ico"         # 网站图标
 
 # 浮动菜单配置
@@ -16,10 +16,10 @@ floating_menu:
 special:
   top: true                            # true: 置顶文章放入Special | false: 普通列表显示置顶
   view:                                 # 当Special无内容时显示的文本信息
-    RF_Information: "备案信息文本"
-    RF_Link: "https://beian.miit.gov.cn"
-    Copyright: "© 2023 VaLog 版权所有"
-    C_Link: "https://github.com"
+    RF_Information: "Text"
+    RF_Link: "Link"
+    Copyright: "©"
+    C_Link: "Link"
     Total_time: "2026.01.01"            # 格式: yyyy.mm.dd，自动计算运行天数
     Others: "其他说明文本"
 
