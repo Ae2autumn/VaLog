@@ -27,11 +27,9 @@ class VaLogGenerator:
                     self.cache = json.load(f)
             except: self.cache = {}
 
-        # 首页专用环境：精准匹配 ${VAR}$，避开 JS 的 ${var}
+        # 现在统一使用标准的 Jinja2 语法 {{ VAR }}
         self.home_env = Environment(
             loader=FileSystemLoader(TEMPLATE_DIR),
-            variable_start_string='${',
-            variable_end_string='}$', # 必须包含 $ 符号以区分 JS
             autoescape=False
         )
         # 文章页专用环境
@@ -117,6 +115,7 @@ class VaLogGenerator:
             "THEME_MODE": self.config.get('theme', {}).get('mode', 'dark'),
             "PRIMARY_COLOR": self.config.get('theme', {}).get('primary_color', '#e74c3c'),
             "TOTAL_TIME": self.config.get('special', {}).get('view', {}).get('Total_time', '2023.01.01'),
+            # 这里需要注意：JavaScript 中需要 JSON 字符串，所以保留 json.dumps
             "ARTICLES_JSON": json.dumps(articles, ensure_ascii=False),
             "SPECIALS_JSON": json.dumps(specials, ensure_ascii=False),
             "MENU_ITEMS_JSON": json.dumps(self.config.get('floating_menu', []), ensure_ascii=False)
