@@ -250,9 +250,14 @@ class VaLogGenerator:
                 
                 # 检查是否为特殊文章
                 is_special = False
+
+                if 'special' in tags:
+                    is_special = True
+                    print(f"  标记为特殊文章 (special标签)")
+
                 
                 # 检查配置的特殊标签
-                if special_top_enabled and 'top' in tags:
+                elif special_top_enabled and 'top' in tags:
                     is_special = True
                     print(f"  标记为特殊文章 (top标签)")
                 
