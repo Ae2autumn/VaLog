@@ -8,7 +8,16 @@ blog:
     primary_color: '#e74c3c'
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
-articles: []
+articles:
+- id: '4'
+  title: 弑杀
+  date: '2026-01-04'
+  tags:
+  - bug
+  content:
+  - 暂无简介
+  url: article/4.html
+  verticalTitle: 弑杀
 specials:
 - id: '0'
   title: ''
