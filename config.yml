@@ -29,3 +29,7 @@ theme:
   primary_color: "#e74c3c"              # 主题主色
   dark_bg: "#121212"                    # 暗色背景（修正为代码中的实际值）
   light_bg: "#f5f7fa"                   # 亮色背景
+
+# 自定义的特殊文章标签
+special_tags:
+  - "Tags"
