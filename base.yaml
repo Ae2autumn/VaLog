@@ -1,6 +1,7 @@
 blog:
   avatar: https://avatars.githubusercontent.com/u/195545824?v=4
   name: Title
+  sname: Title
   description: Des.
   favicon: static/favicon.ico
   theme:
