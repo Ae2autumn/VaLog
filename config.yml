@@ -31,6 +31,11 @@ theme:
   dark_bg: "#121212"                    # 暗色背景（修正为代码中的实际值）
   light_bg: "#f5f7fa"                   # 亮色背景
 
+# 自定义模板文件
+templates:
+  article: "VaLog-default-article.html"  # 文章页面模板
+  home: "VaLog-default-index.html"        # 首页模板
+  
 # 自定义的特殊文章标签
 special_tags:
   - "Tags"
