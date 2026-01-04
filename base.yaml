@@ -4,7 +4,7 @@ blog:
   description: 个人技术博客
   favicon: static/favicon.ico
   theme:
-    mode: dark
+    mode: light
     primary_color: '#e74c3c'
     dark_bg: '#121212'
     light_bg: '#f5f7fa'
