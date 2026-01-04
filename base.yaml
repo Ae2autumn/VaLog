@@ -10,6 +10,16 @@ blog:
     light_bg: '#f5f7fa'
 articles:
 - &id001
+  id: '6'
+  title: top
+  date: '2026-01-04'
+  tags:
+  - top
+  content:
+  - 暂无简介
+  url: article/6.html
+  verticalTitle: top
+- &id002
   id: '5'
   title: Special
   date: '2026-01-04'
@@ -30,6 +40,7 @@ articles:
   verticalTitle: 弑杀
 specials:
 - *id001
+- *id002
 floating_menu:
 - tag: about
   display: 关于
