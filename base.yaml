@@ -1,0 +1,38 @@
+blog:
+  avatar: https://avatars.githubusercontent.com/u/195545824?v=4
+  name: Title
+  sname: Title
+  description: Des.
+  favicon: static/favicon.ico
+  theme:
+    mode: dark
+    primary_color: '#e74c3c'
+    dark_bg: '#121212'
+    light_bg: '#f5f7fa'
+articles: []
+specials:
+- id: '0'
+  title: ''
+  date: ''
+  tags: []
+  content:
+  - Text
+  - ©
+  - '运行天数: 3 天'
+  - 其他说明文本
+  url: ''
+  verticalTitle: Special
+floating_menu:
+- tag: about
+  display: 关于
+- tag: contact
+  display: 联系
+special_config:
+  top: true
+  view:
+    RF_Information: Text
+    RF_Link: Link
+    Copyright: ©
+    C_Link: Link
+    Total_time: 2026.01.01
+    Others: 其他说明文本
