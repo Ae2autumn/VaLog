@@ -186,10 +186,7 @@ python VaLog.py
 ```
 
 自定义扩展
-
-· 样式定制：修改 static/custom.css
-· 脚本扩展：修改 static/custom.js
-· 模板修改：编辑 template/ 中的 HTML 文件
+· 模板修改：编辑 template/ 中的 HTML 文件,或者使用提供的额外模板
 
 API 集成
 
