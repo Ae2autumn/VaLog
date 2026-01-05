@@ -352,6 +352,133 @@
       .menu-mask.active {
          display: block;
       }
+      
+      /* 在 <style> 标签中添加以下内容 */
+
+      /* 修复内容区域的换行和空格问题 */
+      .content {
+          /* 允许文本换行并保留空白 */
+          white-space: pre-wrap;       /* 保留空白和换行 */
+          word-wrap: break-word;       /* 允许长单词换行 */
+          overflow-wrap: break-word;   /* 现代浏览器标准 */
+          
+          /* 确保段落有合适的间距 */
+          line-height: 1.8;
+          font-size: 1.1rem;
+      }
+      
+      /* 针对Markdown转换后的HTML元素设置样式 */
+      .content p {
+          margin-bottom: 1.5em;        /* 增加段落间距 */
+          min-height: 1.2em;           /* 确保空段落也有高度 */
+      }
+      
+      .content pre,
+      .content code {
+          white-space: pre !important; /* 代码块保持原始格式 */
+          font-family: 'Courier New', Consolas, monospace;
+      }
+      
+      .content pre {
+          background-color: rgba(128, 128, 128, 0.1);
+          padding: 1em;
+          border-radius: 5px;
+          overflow-x: auto;
+          margin: 1.5em 0;
+      }
+      
+      .content code:not(pre code) {
+          background-color: rgba(128, 128, 128, 0.2);
+          padding: 0.2em 0.4em;
+          border-radius: 3px;
+          font-size: 0.9em;
+      }
+      
+      /* 标题样式 */
+      .content h1,
+      .content h2,
+      .content h3,
+      .content h4,
+      .content h5,
+      .content h6 {
+          margin-top: 2em;
+          margin-bottom: 1em;
+          padding-bottom: 0.5em;
+          border-bottom: 2px solid rgba(255, 0, 0, 0.3);
+      }
+      
+      /* 列表样式 */
+      .content ul,
+      .content ol {
+          margin: 1.5em 0;
+          padding-left: 2em;
+      }
+      
+      .content li {
+          margin-bottom: 0.5em;
+      }
+      
+      .content li p {
+          margin: 0.5em 0;
+      }
+      
+      /* 引用块样式 */
+      .content blockquote {
+          border-left: 4px solid rgba(255, 0, 0, 0.5);
+          padding-left: 1em;
+          margin: 1.5em 0;
+          font-style: italic;
+          color: #aaa;
+      }
+      
+      /* 表格样式 */
+      .content table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 1.5em 0;
+      }
+      
+      .content th,
+      .content td {
+          border: 1px solid rgba(128, 128, 128, 0.3);
+          padding: 0.75em;
+          text-align: left;
+      }
+      
+      .content th {
+          background-color: rgba(128, 128, 128, 0.1);
+          font-weight: bold;
+      }
+      
+      /* 图片样式 */
+      .content img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 1.5em auto;
+          border-radius: 5px;
+      }
+      
+      /* 水平线样式 */
+      .content hr {
+          border: none;
+          border-top: 2px solid rgba(255, 0, 0, 0.3);
+          margin: 2em 0;
+      }
+      
+      /* 链接样式 */
+      .content a {
+          color: rgba(255, 0, 0, 0.8);
+          text-decoration: none;
+          border-bottom: 1px dotted rgba(255, 0, 0, 0.5);
+          transition: all 0.3s ease;
+      }
+      
+      .content a:hover {
+          color: #fff;
+          border-bottom: 1px solid rgba(255, 0, 0, 0.8);
+          background-color: rgba(255, 0, 0, 0.1);
+      }
 
       body.light-mode {
          background-color: #fff;
@@ -504,13 +631,26 @@
       });
       
       function applyTheme() {
-         const configTheme = "{{ blog.theme.mode }}";
-         const theme = configTheme || 'dark';
-         if (theme === 'light') {
+        // 优先读取 localStorage
+        const savedTheme = localStorage.getItem('theme');
+        
+        if (savedTheme) {
+          // 使用用户保存的主题
+          if (savedTheme === 'light') {
             document.body.classList.add('light-mode');
-         } else {
+          } else {
             document.body.classList.remove('light-mode');
-         }
+          }
+        } else {
+          // 使用服务器配置的主题
+          const configTheme = "{{ blog.theme.mode }}";
+          const theme = configTheme || 'dark';
+          if (theme === 'light') {
+            document.body.classList.add('light-mode');
+          } else {
+            document.body.classList.remove('light-mode');
+          }
+        }
       }
       
       applyTheme();
