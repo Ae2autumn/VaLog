@@ -1,5 +1,5 @@
 blog:
-  avatar: "https://avatars.githubusercontent.com/u/195545824?v=4"           # 头像文件路径（相对路径）
+  avatar: "URL"           # 头像文件路径（相对路径）
   name: "Title"                         # 博客名称
   sname: "Title"                        # Special卡片标题
   description: "Des."                   # 博客描述
@@ -9,8 +9,6 @@ blog:
 floating_menu:
   - tag: "about"                        # 需要匹配的文章标签
     display: "关于"                      # 菜单显示文本
-  - tag: "contact"                      # 需要匹配的文章标签
-    display: "联系"                      # 菜单显示文本
   # 用户可自定义添加，但总项目数不超过10个
 
 # Special卡片配置
