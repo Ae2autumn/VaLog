@@ -12,7 +12,7 @@
    <style>
       :root {
          --primary-color: #e74c3c;
-         --dark-bg: #121212;
+         --dark-bg: #0d0d0d;
          --dark-card: #1e1e1e;
          --light-bg: #f5f7fa;
          --light-primary: #e74c3c;
@@ -603,7 +603,7 @@
 
       .special-card.only-content {
          padding: 0;
-         background: transparent;
+         background: #1e1e1e;
          box-shadow: none;
          cursor: default;
          border-radius: 10;
@@ -1815,6 +1815,12 @@
       
       // ==================== 渲染函数 ====================
       function renderArticles(articles = blogData.articles, isSearchMode = false) {
+        // 确保文章列表区域始终显示
+        const articleListSection = document.getElementById('articleListSection');
+        if (articleListSection) {
+          articleListSection.style.display = 'flex';
+        }
+        
         if (state.virtualScroll) {
           state.virtualScroll.setSearchMode(isSearchMode, articles);
         } else {
@@ -2193,6 +2199,32 @@
         setTimeout(() => {
           updateCardsColorIndices();
           // 如果是日间模式，额外强制更新一次
+          if (document.body.classList.contains('light-mode')) {
+            setTimeout(forceUpdateAllCardsColor, 50);
+          }
+        }, 100);
+      });
+      
+      // 浏览器前进后退按钮处理 - 修复文章页返回后列表消失的问题
+      window.addEventListener('popstate', (event) => {
+        // 重新渲染整个页面来恢复状态
+        const sortedArticles = sortArticlesByDateDesc([...blogData.articles]);
+        renderArticles(sortedArticles, false);
+        renderSpecialCards();
+        
+        // 重新绑定事件
+        bindEvents();
+        bindMenuEvents();
+        
+        // 如果处于搜索模式，退出搜索模式
+        if (state.isSearchMode) {
+          state.isSearchMode = false;
+          state.currentArticles = [];
+        }
+        
+        // 更新卡片颜色
+        setTimeout(() => {
+          updateCardsColorIndices();
           if (document.body.classList.contains('light-mode')) {
             setTimeout(forceUpdateAllCardsColor, 50);
           }
