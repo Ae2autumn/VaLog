@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>{{ BLOG_NAME }}</title>
+   <link rel="icon" href="{{ BLOG_FAVICON }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+   <noscript>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   </noscript>
+   <style>
+      :root {
+         --primary-color: #e74c3c;
+         --dark-bg: #121212;
+         --dark-card: #1e1e1e;
+         --light-bg: #f5f7fa;
+         --light-primary: #e74c3c;
+         --transition-time: 0.3s;
+      }
+
+      * {
+         margin: 0;
+         padding: 0;
+         box-sizing: border-box;
+         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, sans-serif;
+      }
+
+      html,
+      body {
+         height: 100%;
+         background-color: var(--dark-bg);
+         color: #ffffff;
+         line-height: 1.6;
+         transition: background-color var(--transition-time), color var(--transition-time);
+      }
+
+      .container {
+         max-width: 1200px;
+         margin: 0 auto;
+         padding: 13px;
+         height: 100%;
+      }
+
+      .mobile-layout {
+         display: flex;
+         flex-direction: column;
+         height: 100%;
+         overflow: hidden;
+         position: relative;
+      }
+
+      .mobile-top-section {
+         background-color: var(--dark-card);
+         border-radius: 10px;
+         margin-bottom: 5px;
+         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         flex-shrink: 0;
+         contain: layout style;
+         will-change: height, padding;
+         z-index: 10;
+         position: relative;
+      }
+
+      .mobile-top-section.expanded {
+         padding: 10px 15px 15px;
+         max-height: 265px;
+      }
+
+      .mobile-top-section.collapsed {
+         padding: 10px 15px 0px;
+         min-height: 50px;
+      }
+
+      .mobile-top-bar {
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+         margin-bottom: 10px;
+         min-height: 40px;
+      }
+
+      .avatar {
+         width: 40px;
+         height: 40px;
+         border-radius: 50%;
+         background-color: var(--primary-color);
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         color: white;
+         font-size: 18px;
+         flex-shrink: 0;
+         will-change: transform, background-color;
+         transition: transform 0.2s ease-out, background-color var(--transition-time);
+         contain: layout style;
+      }
+
+      .mobile-title-container {
+         flex-grow: 1;
+         text-align: center;
+         cursor: pointer;
+         padding: 0 15px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         min-height: 40px;
+      }
+
+      .mobile-title {
+         color: white;
+         font-size: 18px;
+         font-weight: 600;
+         transition: all var(--transition-time) ease;
+      }
+
+      .menu-btn {
+         width: 36px;
+         height: 36px;
+         border-radius: 50%;
+         background-color: transparent;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         color: white;
+         font-size: 18px;
+         cursor: pointer;
+         flex-shrink: 0;
+         border: none;
+         outline: none;
+         will-change: transform, background-color;
+         transition: transform 0.2s ease-out, background-color var(--transition-time);
+         contain: layout style;
+         z-index: 1002;
+         position: relative;
+      }
+
+      .mobile-top-card {
+         background-color: #121212;
+         border-radius: 8px;
+         padding: 20px;
+         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         max-height: 190px;
+         overflow: hidden;
+         color: white;
+         will-change: max-height, opacity, transform;
+         contain: layout style;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .mobile-top-section.collapsed .mobile-top-card {
+         max-height: 0;
+         padding: 0;
+         margin: 0;
+         opacity: 0;
+         transform: translateY(-10px);
+      }
+
+      .floating-menu {
+         position: fixed;
+         top: 60px;
+         right: 0px;
+         background-color: var(--dark-card);
+         border-radius: 8px;
+         padding: 15px;
+         z-index: 10;
+         visibility: hidden;
+         opacity: 0;
+         width: 105px;
+
+         max-width: calc(100% - 30px);
+         color: white;
+         will-change: opacity, transform, visibility;
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+         contain: layout style;
+         transform-origin: top right;
+         min-width: 0;
+         transform: scale(0.9);
+      }
+
+      .floating-menu.active {
+         visibility: visible;
+         opacity: 1;
+         transform: scale(1);
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+      }
+
+      .floating-menu.closing {
+         visibility: visible;
+         opacity: 0;
+         transform: scale(0.9);
+         transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+      }
+
+      .menu-items {
+         margin-top: 0px;
+      }
+
+      .menu-item {
+         padding: 10px 0;
+         border-bottom: 1px solid #333;
+         font-size: 16px;
+         cursor: pointer;
+         color: white;
+         transition: color 0.2s ease-out, transform 0.2s ease-out;
+         will-change: color, transform;
+         contain: layout style;
+         text-decoration: none;
+         display: block;
+      }
+
+      .menu-item:hover {
+         color: var(--primary-color);
+         transform: translateX(5px);
+      }
+
+      .article-list-section {
+         flex: 1 1 0;
+         min-height: 0;
+         display: flex;
+         flex-direction: column;
+         overflow: hidden;
+         will-change: transform;
+         contain: layout style;
+         z-index: 1;
+         position: relative;
+      }
+
+      .mobile-cards-container {
+         flex: 1;
+         display: flex;
+         flex-direction: column;
+         min-height: 0;
+         overflow: hidden;
+      }
+
+      .mobile-cards-wrapper {
+         flex: 1;
+         display: flex;
+         gap: 15px;
+         padding: 10px 5px 15px;
+         overflow-x: auto;
+         overflow-y: hidden;
+         -ms-overflow-style: none;
+         scrollbar-width: none;
+         will-change: transform;
+         backface-visibility: hidden;
+         -webkit-backface-visibility: hidden;
+         transform: translateZ(0);
+         -webkit-transform: translateZ(0);
+         contain: layout style paint;
+         z-index: 1;
+      }
+
+      .mobile-cards-wrapper::-webkit-scrollbar {
+         display: none;
+      }
+
+      .rectangle-card {
+         min-width: 82px;
+         height: 100%;
+         border-radius: 10px;
+         cursor: pointer;
+         transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+         position: relative;
+         overflow: hidden;
+         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+         flex-shrink: 0;
+         will-change: transform, min-width;
+         contain: layout style;
+         background: linear-gradient(135deg, var(--primary-color), #c0392b);
+         z-index: 1;
+      }
+
+      .rectangle-card.active {
+         min-width: 279px;
+         background: linear-gradient(135deg, #c0392b, #a93226);
+         z-index: 2;
+      }
+
+      .vertical-title {
+         letter-spacing: 0.1em;
+         position: absolute;
+         top: 20px;
+         left: 13px;
+         color: white;
+         font-size: 18px;
+         font-weight: bold;
+         writing-mode: vertical-rl;
+         text-orientation: mixed;
+         transform: rotate(0deg);
+         transition: opacity var(--transition-time) ease;
+         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+      }
+
+      .rectangle-card.active .vertical-title {
+         opacity: 0;
+      }
+
+      .card-content-expanded {
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 279px;
+         height: 100%;
+         padding: 15px;
+         color: white;
+         opacity: 0;
+         transition: opacity var(--transition-time) ease 0.2s;
+         display: flex;
+         flex-direction: column;
+         overflow: hidden;
+      }
+
+      .rectangle-card.active .card-content-expanded {
+         opacity: 1;
+      }
+
+      .card-tags {
+         display: flex;
+         gap: 8px;
+         margin-bottom: 10px;
+         flex-shrink: 0;
+         flex-wrap: wrap;
+      }
+
+      .card-tag {
+         background-color: rgba(255, 255, 255, 0.1);
+         color: white;
+         padding: 4px 8px;
+         border-radius: 4px;
+         font-size: 12px;
+         font-weight: 500;
+         will-change: transform, background-color;
+         transition: transform 0.2s ease-out, background-color 0.2s ease-out;
+         contain: layout style;
+         width: auto;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         max-width: 200px;
+      }
+
+      .date-tag {
+         font-weight: 500;
+         padding-left: 6px;
+      }
+
+      .card-title-container {
+         flex-shrink: 0;
+         margin-bottom: 10px;
+         overflow: hidden;
+      }
+
+      .card-title-container h2 {
+         font-size: 22px;
+         font-weight: 600;
+         color: white;
+         margin: 0;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         display: -webkit-box;
+         -webkit-line-clamp: 2;
+         -webkit-box-orient: vertical;
+         word-break: break-word;
+      }
+
+      .card-content-main {
+         flex: 1;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         margin-bottom: 10px;
+         padding-right: 5px;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .card-content-main::-webkit-scrollbar {
+         display: none;
+      }
+
+      .card-content-main p {
+         font-size: 14px;
+         line-height: 1.5;
+         margin-bottom: 10px;
+         opacity: 0.9;
+         color: white;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .card-footer {
+         flex-shrink: 0;
+         padding-top: 10px;
+         display: flex;
+         justify-content: flex-end;
+      }
+
+      .mobile-card-btn {
+         background-color: rgba(255, 255, 255, 0.2);
+         color: white;
+         border: none;
+         padding: 8px 16px;
+         border-radius: 5px;
+         cursor: pointer;
+         font-weight: 500;
+         font-size: 14px;
+         transition: background-color 0.2s ease-out, transform 0.2s ease-out;
+         will-change: transform, background-color;
+         contain: layout style;
+         white-space: nowrap;
+      }
+
+      .special-card {
+         background: linear-gradient(135deg, var(--primary-color), #c0392b);
+         color: white;
+         border-radius: 10px;
+         padding: 15px;
+         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+         cursor: pointer;
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         overflow: hidden;
+         flex-shrink: 0;
+         will-change: transform, background;
+         contain: layout style;
+         z-index: 1;
+         position: relative;
+      }
+
+      .special-card-header {
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+         margin-bottom: 0;
+         padding: 0;
+         cursor: pointer;
+         user-select: none;
+         -webkit-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+      }
+
+      .special-card-title {
+         font-size: 18px;
+         font-weight: 600;
+         color: white;
+         margin: 0;
+         pointer-events: none;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .special-card-content {
+         max-height: 0;
+         opacity: 0;
+         overflow: hidden;
+         transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+         will-change: max-height, opacity, margin, padding;
+         contain: layout style;
+         padding-top: 0;
+         margin-top: 0;
+         transform-origin: top;
+      }
+
+      .special-card.expanded .special-card-content {
+         max-height: 320px;
+         opacity: 1;
+         margin-top: 10px;
+      }
+
+      .special-cards-container {
+         display: flex;
+         flex-direction: column;
+         gap: 15px;
+         height: auto;
+         max-height: 194px;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         will-change: transform;
+         padding-right: 0px;
+      }
+
+      .special-cards-container::-webkit-scrollbar {
+         display: none;
+      }
+
+      .special-card-item {
+         background-color: rgba(255, 255, 255, 0.1);
+         border-radius: 8px;
+         padding: 15px;
+         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+         display: flex;
+         flex-direction: column;
+         flex-shrink: 0;
+         height: 187px;
+         overflow: hidden;
+         cursor: auto;
+         will-change: transform, opacity;
+         transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+         contain: layout style;
+      }
+
+      .special-card-item-content {
+         display: flex;
+         flex-direction: column;
+         height: 100%;
+         overflow: hidden;
+      }
+
+      .special-card-item .card-tags {
+         margin-bottom: 8px;
+      }
+
+      .special-card-item h4 {
+         font-size: 16px;
+         font-weight: 600;
+         margin-bottom: 8px;
+         color: white;
+         flex-shrink: 0;
+         will-change: transform;
+         transition: transform 0.2s ease-out;
+         contain: layout style;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+      }
+
+      .special-card-item-content-main {
+         flex: 1;
+         overflow-y: auto;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         margin-bottom: 8px;
+         padding-right: 5px;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .special-card-item-content-main::-webkit-scrollbar {
+         display: none;
+      }
+
+      .special-card-item-content-main p {
+         font-size: 14px;
+         line-height: 1.5;
+         margin-bottom: 8px;
+         opacity: 0.9;
+         color: white;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .special-card-item-footer {
+         flex-shrink: 0;
+         padding-top: 8px;
+         display: flex;
+         justify-content: flex-end;
+      }
+
+      .special-card-btn {
+         background-color: rgba(255, 255, 255, 0.2);
+         color: white;
+         border: none;
+         padding: 8px 16px;
+         border-radius: 5px;
+         cursor: pointer;
+         font-weight: 500;
+         font-size: 14px;
+         transition: background-color 0.2s ease-out, transform 0.2s ease-out;
+         will-change: transform, background-color;
+         contain: layout style;
+         white-space: nowrap;
+      }
+
+      .special-card.only-content {
+         padding: 0;
+         background: transparent;
+         box-shadow: none;
+         cursor: default;
+         border-radius: 10;
+         height: auto;
+         min-height: 0;
+      }
+
+      .special-card.only-content .special-card-header {
+         display: none;
+      }
+
+      .special-card.only-content .special-card-content {
+         max-height: none;
+         opacity: 1;
+         margin-top: 0;
+         padding: 0;
+         overflow: visible;
+         height: auto;
+         min-height: 0;
+         cursor: auto;
+      }
+
+      .special-card.only-content .special-cards-container {
+         display: block;
+         max-height: none;
+         overflow: visible;
+         gap: 0;
+         height: auto;
+         min-height: 0;
+         padding: 0;
+         margin: 0;
+      }
+
+      .special-card.only-content .special-card-item {
+         background-color: transparent;
+         padding: 0;
+         margin: 0;
+         box-shadow: none;
+         height: auto;
+         min-height: 0;
+         max-height: none;
+         border-radius: 10;
+         cursor: default;
+      }
+
+      .special-card.only-content .special-card-item-content {
+         display: block;
+         height: auto;
+         min-height: 0;
+         max-height: none;
+         overflow: visible;
+         padding: 0;
+         margin: 0;
+      }
+
+      .special-card.only-content .special-card-item-content-main {
+         overflow: visible;
+         max-height: none;
+         height: auto;
+         min-height: 0;
+         padding: 0;
+         margin: 0;
+         color: white;
+         font-size: 16px;
+         line-height: 1.6;
+         opacity: 0.9;
+         font-style: italic;
+         text-align: center;
+         background: transparent;
+         border-radius: 0;
+         cursor: default;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .special-card.only-content .card-tags,
+      .special-card.only-content .special-card-item h4,
+      .special-card.only-content .special-card-item-footer {
+         display: none;
+      }
+
+      .special-card-item-content-simple {
+         color: white;
+         font-size: 16px;
+         line-height: 1.6;
+         opacity: 0.9;
+         font-style: italic;
+         text-align: center;
+         padding: 20px 15px;
+         background: rgba(255, 255, 255, 0.05);
+         border-radius: 8px;
+         cursor: default;
+         width: 100%;
+         box-sizing: border-box;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .search-overlay {
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background-color: rgba(0, 0, 0, 0.8);
+         z-index: 1000;
+         display: none;
+         justify-content: center;
+         align-items: center;
+         opacity: 0;
+         transition: opacity 0.3s ease;
+         backdrop-filter: blur(5px);
+      }
+
+      .search-overlay.active {
+         display: flex;
+         opacity: 1;
+      }
+
+      .search-container {
+         width: 90%;
+         max-width: 500px;
+         height: auto;
+         background-color: var(--dark-card);
+         border-radius: 12px;
+         padding: 25px;
+         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+         transform: translateY(20px);
+         opacity: 0;
+         transition: transform 0.3s ease, opacity 0.3s ease;
+         position: relative;
+         word-wrap: break-word;
+         overflow-wrap: break-word;
+         word-break: break-word;
+      }
+
+      .search-overlay.active .search-container {
+         transform: translateY(0);
+         opacity: 1;
+      }
+
+      .search-input-container {
+         position: relative;
+         margin-bottom: 20px;
+      }
+
+      .search-input {
+         width: 100%;
+         padding: 15px 20px;
+         background-color: rgba(255, 255, 255, 0.1);
+         border: 2px solid rgba(255, 255, 255, 0.2);
+         border-radius: 8px;
+         color: white;
+         font-size: 16px;
+         outline: none;
+         transition: all 0.3s ease;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .search-input:focus {
+         border-color: var(--primary-color);
+         background-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .search-input.error {
+         border-color: #ff0000 !important;
+         animation: shake 0.5s ease-in-out;
+      }
+
+      @keyframes shake {
+
+         0%,
+         100% {
+            transform: translateX(0);
+         }
+
+         25% {
+            transform: translateX(-5px);
+         }
+
+         75% {
+            transform: translateX(5px);
+         }
+      }
+
+      .search-options {
+         display: flex;
+         gap: 10px;
+         flex-wrap: wrap;
+         justify-content: center;
+      }
+
+      .search-option {
+         padding: 8px 16px;
+         background-color: rgba(255, 255, 255, 0.1);
+         color: white;
+         border: none;
+         border-radius: 5px;
+         cursor: pointer;
+         font-size: 14px;
+         transition: all 0.2s ease;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .search-option:hover {
+         background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .search-option.active {
+         background-color: var(--primary-color);
+         color: white;
+         box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+      }
+
+      .search-mode-indicator {
+         position: absolute;
+         top: 10px;
+         right: 10px;
+         background-color: var(--primary-color);
+         color: white;
+         padding: 5px 10px;
+         border-radius: 4px;
+         font-size: 12px;
+         display: none;
+         z-index: 100;
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .light-mode {
+         background-color: var(--light-bg);
+         color: white;
+      }
+
+      .light-mode .mobile-top-section {
+         background-color: var(--light-primary);
+      }
+
+      .light-mode .mobile-top-card {
+         background-color: white;
+         color: gray;
+      }
+
+      .light-mode .mobile-top-card h2 {
+         color: #cdcdcd;
+      }
+
+      .light-mode .floating-menu {
+         background-color: white;
+         color: gray;
+      }
+
+      .light-mode .menu-item {
+         border-bottom-color: #eee;
+         color: gray;
+      }
+
+      .light-mode .menu-item:hover {
+         color: var(--light-primary);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+1) {
+         background: linear-gradient(135deg, #ffb6c1, #ff69b4);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+1).active {
+         background: linear-gradient(135deg, #ff69b4, #ff1493);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+2) {
+         background: linear-gradient(135deg, #98fb98, #90ee90);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+2).active {
+         background: linear-gradient(135deg, #90ee90, #7cfc00);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+3) {
+         background: linear-gradient(135deg, #add8e6, #87ceeb);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+3).active {
+         background: linear-gradient(135deg, #87ceeb, #6495ed);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+4) {
+         background: linear-gradient(135deg, #fffacd, #f0e68c);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n+4).active {
+         background: linear-gradient(135deg, #f0e68c, #ffd700);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n) {
+         background: linear-gradient(135deg, #d3d3d3, #c0c0c0);
+      }
+
+      .light-mode .rectangle-card:nth-child(5n).active {
+         background: linear-gradient(135deg, #c0c0c0, #a9a9a9);
+      }
+
+      .light-mode .special-card {
+         background: linear-gradient(135deg, #d8bfd8, #dda0dd);
+      }
+
+      .light-mode .special-card.expanded {
+         background: linear-gradient(135deg, #dda0dd, #eeb1ee);
+      }
+
+      .light-mode .special-card-item {
+         background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .light-mode .special-card-item h4 {
+         color: white;
+      }
+
+      .light-mode .card-tag {
+         background-color: rgba(0, 0, 0, 0.1);
+         color: white;
+      }
+
+      .light-mode .date-tag {
+         background-color: rgba(0, 0, 0, 0.15) !important;
+         border-left-color: var(--light-primary);
+      }
+
+      .light-mode .vertical-title {
+         color: white;
+         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      .light-mode .rectangle-card.active .card-content-expanded h2 {
+         color: white;
+      }
+
+      .light-mode .special-card-title {
+         color: white;
+      }
+
+      .light-mode .search-overlay {
+         background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .light-mode .search-container {
+         background-color: white;
+         color: #333;
+      }
+
+      .light-mode .search-input {
+         background-color: rgba(0, 0, 0, 0.05);
+         border-color: rgba(0, 0, 0, 0.1);
+         color: #333;
+      }
+
+      .light-mode .search-input:focus {
+         border-color: var(--light-primary);
+         background-color: rgba(0, 0, 0, 0.08);
+      }
+
+      .light-mode .search-input.error {
+         border-color: #ff0000 !important;
+      }
+
+      .light-mode .search-option {
+         background-color: rgba(0, 0, 0, 0.05);
+         color: #333;
+      }
+
+      .light-mode .search-option:hover {
+         background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      .light-mode .search-option.active {
+         background-color: var(--light-primary);
+         color: white;
+         box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+      }
+
+      .menu-btn:active,
+      .close-menu:active,
+      .mobile-card-btn:active,
+      .special-card-btn:active {
+         transform: scale(0.95);
+      }
+
+      .card-tag:hover {
+         transform: translateY(-1px);
+         background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .card-title-container h2:hover {
+         transform: translateX(2px);
+      }
+
+      .special-card-item:hover {
+         transform: translateY(-2px);
+         opacity: 0.95;
+      }
+
+      .special-card-title:hover {
+         transform: translateX(2px);
+      }
+
+      .mobile-top-section,
+      .mobile-top-card,
+      .special-card,
+      .special-card-content,
+      .rectangle-card,
+      .search-overlay,
+      .search-container {
+         backface-visibility: hidden;
+         -webkit-backface-visibility: hidden;
+         perspective: 1000;
+         -webkit-perspective: 1000;
+      }
+
+      .mobile-cards-wrapper,
+      .special-cards-container,
+      .card-content-main,
+      .special-card-item-content-main {
+         scroll-behavior: smooth;
+         -webkit-overflow-scrolling: touch;
+      }
+   </style>
+</head>
+
+<body class="{{ THEME_MODE }}-mode">
+   <div class="container">
+      <div class="mobile-layout">
+         <div class="mobile-top-section expanded" id="mobileTopSection">
+            <div class="mobile-top-bar">
+               <div class="avatar" role="img" aria-label="Avatar">
+                  <img src="{{ BLOG_AVATAR }}" alt="avatar"
+                                                                                                                                          style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+               </div>
+               <div class="mobile-title-container" id="titleToggle" tabindex="0" role="button"
+                                                                                                                                       aria-label="Toggle Title">
+                  <div class="mobile-title">{{ BLOG_NAME }}</div>
+               </div>
+               <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false"
+                                                                                                                                       aria-controls="floatingMenu">≡</button>
+            </div>
+            <div class="mobile-top-card">
+               <p>{{ BLOG_DESCRIPTION }}</p>
+            </div>
+
+            <div class="floating-menu" id="floatingMenu" role="menu" aria-hidden="true">
+               <div class="menu-items" id="menuItems">
+                  <div class="menu-item" id="searchMenuItem" role="menuitem" tabindex="0">搜索</div>
+                  <div class="menu-item" id="darkModeToggle" role="menuitem" tabindex="0">日间模式</div>
+               </div>
+            </div>
+         </div>
+
+         <div class="article-list-section" id="articleListSection">
+            <div class="mobile-cards-container">
+               <div class="mobile-cards-wrapper" id="mobileCardsWrapper">
+               </div>
+            </div>
+         </div>
+
+         <section class="special-card" id="specialCard" aria-labelledby="specialCardTitle" aria-expanded="false">
+            <div class="special-card-header">
+               <h3 id="specialCardTitle" class="special-card-title">{{ SPECIAL_NAME }}</h3>
+            </div>
+            <div class="special-card-content" id="specialCardContent">
+               <div class="special-cards-container" id="specialCardsContainer">
+               </div>
+            </div>
+         </section>
+      </div>
+   </div>
+
+   <div class="search-overlay" id="searchOverlay">
+      <div class="search-container">
+         <div class="search-input-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Enter确认,点击标题退出" autocomplete="off">
+         </div>
+         <div class="search-options" id="searchOptions">
+            <button class="search-option active" data-type="title">标题</button>
+            <button class="search-option" data-type="tag">标签</button>
+            <button class="search-option" data-type="content">简介</button>
+         </div>
+      </div>
+   </div>
+
+   <script>
+     // ==================== 数据注入点 (由生成引擎替换) ====================
+     const blogData = {
+       articles: {{ ARTICLES_JSON }},
+       specials: {{ SPECIALS_JSON }}
+     };
+     const menuItemsData = {{ MENU_ITEMS_JSON }};
+     const blogConfig = {
+       themeColor: "{{ PRIMARY_COLOR }}",
+       runDate: "{{ TOTAL_TIME }}"
+     };
+     
+     // ==================== 标签过滤器 ====================
+     class TagFilter {
+        constructor() {
+           // 内部标签列表，可以配置
+           this.internalTags = new Set( {{ SPECIAL_TAGS }} );
+        }
+        
+        // 过滤掉内部标签
+        filterTags(tags) {
+           if (!tags || !Array.isArray(tags)) {
+              return [];
+           }
+           return tags.filter(tag => tag && !this.internalTags.has(tag.toLowerCase().trim()));
+        }
+        
+        // 过滤文章（用于搜索时）
+        filterArticle(article) {
+           if (!article) return false;
+           
+           // 返回文章的过滤后标签
+           const filteredTags = this.filterTags(article.tags);
+           return {
+              ...article,
+              filteredTags: filteredTags
+           };
+        }
+        
+        // 检查是否应该显示（用于搜索过滤）
+        shouldDisplayByTag(tags) {
+           if (!tags || !Array.isArray(tags)) return true;
+           return tags.some(tag => !this.internalTags.has(tag.toLowerCase().trim()));
+        }
+        
+        // 获取第一个可显示标签（用于垂直标题）
+        getFirstDisplayableTag(tags) {
+           if (!tags || !Array.isArray(tags)) return null;
+           for (let tag of tags) {
+              if (tag && !this.internalTags.has(tag.toLowerCase().trim())) {
+                 return tag;
+              }
+           }
+           return null;
+        }
+        
+        // 添加内部标签
+        addInternalTag(tag) {
+           if (tag) {
+              this.internalTags.add(tag.toLowerCase().trim());
+           }
+        }
+        
+        // 移除内部标签
+        removeInternalTag(tag) {
+           if (tag) {
+              this.internalTags.delete(tag.toLowerCase().trim());
+           }
+        }
+        
+        // 获取所有内部标签
+        getInternalTags() {
+           return Array.from(this.internalTags);
+        }
+     }
+     
+     // 初始化标签过滤器
+     const tagFilter = new TagFilter();
+     
+     // ==================== 状态管理 ====================
+     const SEARCH_TYPES = { TITLE: 'title', TAG: 'tag', CONTENT: 'content' };
+     const state = {
+       isSearchMode: false,
+       currentArticles: [],
+       searchType: SEARCH_TYPES.TITLE
+     };
+     
+     // ==================== 主题管理 ====================
+     
+     // 获取当前主题
+     function getCurrentTheme() {
+       return document.body.classList.contains('light-mode') ? 'light' : 'dark';
+     }
+     
+     // 设置主题
+     function setTheme(theme) {
+       const isLight = theme === 'light';
+       
+       // 切换类
+       if (isLight) {
+         document.body.classList.add('light-mode');
+         document.body.classList.remove('dark-mode');
+       } else {
+         document.body.classList.add('dark-mode');
+         document.body.classList.remove('light-mode');
+       }
+       
+       // 更新按钮文本
+       const themeBtn = document.getElementById('darkModeToggle');
+       if (themeBtn) {
+         themeBtn.textContent = isLight ? '夜间模式' : '日间模式';
+       }
+       
+       // 保存到 localStorage
+       localStorage.setItem('theme', theme);
+     }
+     
+     // 切换主题
+     function toggleTheme() {
+       const currentTheme = getCurrentTheme();
+       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+       setTheme(newTheme);
+       closeFloatingMenu();
+     }
+     
+     // 初始化主题
+     function initTheme() {
+       // 尝试从 localStorage 读取用户设置
+       const savedTheme = localStorage.getItem('theme');
+       
+       if (savedTheme === 'light' || savedTheme === 'dark') {
+         // 使用用户保存的设置
+         setTheme(savedTheme);
+       } else {
+         // 如果没有保存的设置，使用初始设置（从HTML的body类获取）
+         const initialTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+         // 保存初始设置
+         setTheme(initialTheme);
+       }
+     }
+     
+     // ==================== 核心逻辑 ====================
+     
+     // 规格 4.4: 仅文本模式触发条件
+     function shouldShowOnlyContent(special) {
+       const hasTitle = special.title && special.title.trim() !== '';
+       const hasTags = special.tags && special.tags.length > 0;
+       const hasContent = special.content && special.content.length > 0;
+       // 只有内容，没有标题和标签时触发
+       return hasContent && !hasTitle && !hasTags;
+     }
+     
+     function renderArticles(articles = blogData.articles, isSearchMode = false) {
+       const wrapper = document.getElementById('mobileCardsWrapper');
+       wrapper.innerHTML = '';
+       
+       // 按日期倒序
+       const sorted = [...articles].sort((a, b) => new Date(b.date) - new Date(a.date));
+     
+       sorted.forEach((article, index) => {
+         const card = document.createElement('article');
+         card.className = 'rectangle-card';
+         
+         // 使用标签过滤器获取过滤后的标签
+         const filteredTags = tagFilter.filterTags(article.tags);
+         const firstDisplayableTag = tagFilter.getFirstDisplayableTag(article.tags);
+         
+         // 规格 3.3: 默认垂直标题为第一个可显示标签
+         const vTitle = article.verticalTitle || firstDisplayableTag || 'Blog';
+         
+         // 构建标签HTML - 只显示过滤后的标签
+         let tagsHTML = '';
+         if (article.date) {
+           tagsHTML += `<span class="card-tag date-tag">${article.date}</span>`;
+         }
+         if (filteredTags && Array.isArray(filteredTags)) {
+           tagsHTML += filteredTags.map(tag => `<span class="card-tag">${escapeHtml(tag)}</span>`).join('');
+         }
+         
+         // 构建内容HTML
+         let contentHTML = '';
+         if (article.content && Array.isArray(article.content)) {
+           contentHTML = article.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+         }
+         
+         card.innerHTML = `
+           <div class="vertical-title">${escapeHtml(vTitle)}</div>
+           <div class="card-content-expanded">
+             <div class="card-tags">
+               ${tagsHTML}
+             </div>
+             <div class="card-title-container">
+               <h2>${escapeHtml(article.title)}</h2>
+             </div>
+             <div class="card-content-main">
+               ${contentHTML}
+             </div>
+             <div class="card-footer">
+               <button class="mobile-card-btn" onclick="window.location.href='${escapeHtml(article.url)}'">Read</button>
+             </div>
+           </div>
+         `;
+     
+         // 搜索模式默认展开第一个，普通模式默认展开第二个(索引1)
+         if ((!isSearchMode && index === 1) || (isSearchMode && index === 0)) {
+           setTimeout(() => card.classList.add('active'), 100);
+         }
+     
+         card.addEventListener('click', (e) => {
+           if (e.target.closest('.mobile-card-btn')) return;
+           document.querySelectorAll('.rectangle-card').forEach(c => c !== card && c.classList.remove('active'));
+           card.classList.toggle('active');
+         });
+         wrapper.appendChild(card);
+       });
+     }
+     
+     function renderSpecialCards() {
+       const container = document.getElementById('specialCardsContainer');
+       const specialSection = document.getElementById('specialCard');
+       container.innerHTML = '';
+     
+       if (!blogData.specials || blogData.specials.length === 0) {
+         specialSection.style.display = 'none';
+         return;
+       }
+     
+       blogData.specials.forEach(special => {
+         const item = document.createElement('div');
+         
+         if (shouldShowOnlyContent(special)) {
+           // 仅文本模式
+           specialSection.classList.add('only-content', 'expanded');
+           item.className = 'special-card-item-content-simple';
+           
+           // 构建纯文本内容
+           let contentHTML = '';
+           if (special.content && Array.isArray(special.content)) {
+             contentHTML = special.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+           }
+           item.innerHTML = contentHTML;
+         } else {
+           // 正常模式
+           item.className = 'special-card-item';
+           
+           // 使用标签过滤器获取过滤后的标签
+           const filteredTags = tagFilter.filterTags(special.tags);
+           
+           // 构建标签HTML - 只显示过滤后的标签
+           let tagsHTML = '';
+           if (filteredTags && Array.isArray(filteredTags)) {
+             tagsHTML = filteredTags.map(t => `<span class="card-tag">${escapeHtml(t)}</span>`).join('');
+           }
+           
+           // 构建内容HTML
+           let contentHTML = '';
+           if (special.content && Array.isArray(special.content)) {
+             contentHTML = special.content.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+           }
+           
+           // 构建按钮HTML
+           let buttonHTML = '';
+           if (special.url) {
+             buttonHTML = `
+               <div class="special-card-item-footer">
+                 <button class="special-card-btn" onclick="window.open('${escapeHtml(special.url)}', '_blank')">Visit</button>
+               </div>
+             `;
+           }
+           
+           item.innerHTML = `
+             <div class="special-card-item-content">
+               <div class="card-tags">
+                 ${tagsHTML}
+               </div>
+               <h4>${escapeHtml(special.title || '')}</h4>
+               <div class="special-card-item-content-main">
+                 ${contentHTML}
+               </div>
+               ${buttonHTML}
+             </div>
+           `;
+         }
+         container.appendChild(item);
+       });
+     }
+     
+     function renderMenu() {
+       const menuContainer = document.getElementById('menuItems');
+       const searchBtn = document.getElementById('searchMenuItem');
+       const themeBtn = document.getElementById('darkModeToggle');
+       
+       // 保留搜索和主题切换，清空其他的
+       menuContainer.innerHTML = '';
+       menuContainer.appendChild(searchBtn);
+     
+       if (menuItemsData && Array.isArray(menuItemsData)) {
+         menuItemsData.forEach(item => {
+           // 如果item有url，直接使用
+           if (item.url) {
+             const link = document.createElement('a');
+             link.className = 'menu-item';
+             link.href = item.url;
+             link.textContent = item.display;
+             link.onclick = () => closeFloatingMenu();
+             menuContainer.appendChild(link);
+           } 
+           // 如果item有tag，查找对应的文章
+           else if (item.tag) {
+             // 在articles中查找对应tag的文章
+             const matchedArticle = blogData.articles.find(article => 
+               article.tags && article.tags.includes(item.tag)
+             );
+             
+             if (matchedArticle && matchedArticle.url) {
+               const link = document.createElement('a');
+               link.className = 'menu-item';
+               link.href = matchedArticle.url;
+               link.textContent = item.display || item.tag;
+               link.onclick = () => closeFloatingMenu();
+               menuContainer.appendChild(link);
+             }
+           }
+           // 如果既没有url也没有tag，跳过不显示
+         });
+       }
+     
+       menuContainer.appendChild(themeBtn);
+     }
+     
+     // ==================== 辅助函数 ====================
+     function escapeHtml(text) {
+       if (!text) return '';
+       const div = document.createElement('div');
+       div.textContent = text;
+       return div.innerHTML;
+     }
+     
+     // ==================== 交互事件 ====================
+     function toggleFloatingMenu() {
+       const menu = document.getElementById('floatingMenu');
+       const isClosing = menu.classList.contains('active');
+       if (isClosing) {
+         menu.classList.add('closing');
+         menu.classList.remove('active');
+         setTimeout(() => menu.classList.remove('closing'), 250);
+       } else {
+         menu.classList.add('active');
+       }
+     }
+     
+     function closeFloatingMenu() {
+       const menu = document.getElementById('floatingMenu');
+       if(menu.classList.contains('active')) toggleFloatingMenu();
+     }
+     
+     function performSearch() {
+       const input = document.getElementById('searchInput');
+       const keyword = input.value.trim().toLowerCase();
+       if (!keyword) return;
+     
+       const filtered = blogData.articles.filter(a => {
+         if (!a) return false;
+         
+         if (state.searchType === SEARCH_TYPES.TITLE) {
+           return a.title && a.title.toLowerCase().includes(keyword);
+         }
+         if (state.searchType === SEARCH_TYPES.TAG) {
+           // 搜索时也过滤掉内部标签
+           const filteredTags = tagFilter.filterTags(a.tags);
+           return filteredTags && filteredTags.some(t => t && t.toLowerCase().includes(keyword));
+         }
+         if (state.searchType === SEARCH_TYPES.CONTENT) {
+           return a.content && a.content.some(c => c && c.toLowerCase().includes(keyword));
+         }
+         return false;
+       });
+     
+       if (filtered.length > 0) {
+         state.isSearchMode = true;
+         renderArticles(filtered, true);
+         document.getElementById('searchOverlay').classList.remove('active');
+         input.value = '';
+         input.placeholder = '输入关键词搜索...';
+       } else {
+         input.classList.add('error');
+         setTimeout(() => {
+           input.classList.remove('error');
+           input.placeholder = '未找到相关内容';
+         }, 500);
+       }
+     }
+     
+     // ==================== 初始化 ====================
+     document.addEventListener('DOMContentLoaded', () => {
+       // 初始化主题
+       initTheme();
+       
+       // 渲染内容
+       renderArticles();
+       renderSpecialCards();
+       renderMenu();
+     
+       // 基础事件绑定
+       document.getElementById('menuBtn').addEventListener('click', toggleFloatingMenu);
+       document.getElementById('searchMenuItem').addEventListener('click', () => {
+         document.getElementById('searchOverlay').classList.add('active');
+         document.getElementById('searchInput').focus();
+         closeFloatingMenu();
+       });
+       
+       // 主题切换按钮 - 使用新的切换函数
+       document.getElementById('darkModeToggle').addEventListener('click', toggleTheme);
+       
+       document.getElementById('titleToggle').addEventListener('click', () => {
+         if (state.isSearchMode) {
+           state.isSearchMode = false;
+           renderArticles();
+         } else {
+           document.getElementById('mobileTopSection').classList.toggle('expanded');
+           document.getElementById('mobileTopSection').classList.toggle('collapsed');
+         }
+       });
+       
+       document.getElementById('searchInput').addEventListener('keypress', (e) => {
+         if (e.key === 'Enter') {
+           performSearch();
+         }
+       });
+       
+       // 点击外部关闭
+       document.addEventListener('click', (e) => {
+         if (!e.target.closest('#floatingMenu') && !e.target.closest('#menuBtn')) {
+           closeFloatingMenu();
+         }
+         if (e.target.id === 'searchOverlay') {
+           e.target.classList.remove('active');
+           const input = document.getElementById('searchInput');
+           input.value = '';
+           input.placeholder = '输入关键词搜索...';
+         }
+       });
+     
+       // 搜索类型切换
+       document.querySelectorAll('.search-option').forEach(btn => {
+         btn.addEventListener('click', () => {
+           document.querySelectorAll('.search-option').forEach(b => b.classList.remove('active'));
+           btn.classList.add('active');
+           state.searchType = btn.dataset.type;
+         });
+       });
+     
+       // Special Header 点击
+       const specialHeader = document.querySelector('.special-card-header');
+       if (specialHeader) {
+         specialHeader.addEventListener('click', () => {
+           const card = document.getElementById('specialCard');
+           if (card && !card.classList.contains('only-content')) {
+             card.classList.toggle('expanded');
+           }
+         });
+       }
+       
+       // 设置主题颜色
+       if (blogConfig.themeColor) {
+         document.documentElement.style.setProperty('--primary-color', blogConfig.themeColor);
+       }
+     }); // DOMContentLoaded结束
+   </script>
+</body>
+
+</html>
